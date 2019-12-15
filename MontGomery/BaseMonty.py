@@ -83,7 +83,6 @@ class BaseMonty():
                 'safebrowsing.enabled': True
             }
         )
-        options.binary_location = GOOGLE_CHROME_PATH
         driver = webdriver.Chrome(options=options)
         max_screen_width = driver.get_window_size().get('width')
         max_screen_height = driver.get_window_size().get('height')
