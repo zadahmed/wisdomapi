@@ -83,7 +83,7 @@ class BaseMonty():
             }
         )
         options.binary_location = GOOGLE_CHROME_PATH
-        driver = webdriver.Chrome(executable_path=CHROMEDRIVER_PATH,chrome_options=options)
+        driver = webdriver.Chrome(executable_path=CHROMEDRIVER_PATH,options=options)
         max_screen_width = driver.get_window_size().get('width')
         max_screen_height = driver.get_window_size().get('height')
         return start_datetime, start, driver, max_screen_width, max_screen_height
