@@ -1,0 +1,21 @@
+selenium==3.14.1
+nltk==3.3
+#urllib3<1.25
+urllib3==1.24
+#numpy<1.14.4
+#python-dateutil
+#pytz>=2011k
+#pandas==0.23.0
+sumy==0.7.0
+#spacy==2.0.18
+gensim==3.7.3
+beautifulsoup4==4.6.0
+youtube-dl==2019.4.24
+langdetect==1.0.7
+flask=1.1.1
+
+# Use this to enter image and move file structure
+# $ docker run -it dockermonty sh
+
+# Use this to run interactively
+# docker run -it dockermonty
