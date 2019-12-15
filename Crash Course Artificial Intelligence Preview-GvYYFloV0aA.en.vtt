@@ -1,0 +1,214 @@
+WEBVTT
+Kind: captions
+Language: en
+
+00:00:00.000 --> 00:00:05.620
+Hi! I’m Jabril, and welcome to Crash Course Artificial Intelligence.
+
+00:00:05.620 --> 00:00:08.940
+Whether we notice it or not, artificial intelligence
+is EVERYWHERE.
+
+00:00:08.940 --> 00:00:13.470
+It’s guiding critical decisions in every
+field, from finance to health.
+
+00:00:13.470 --> 00:00:18.940
+It’s driving the algorithms of technology
+giants like Google, Amazon, Facebook, and Netflix.
+
+00:00:18.940 --> 00:00:24.500
+And it’s what puts the “smart” in our
+smart devices like Siri, Alexa, and Google Assistant.
+
+00:00:24.500 --> 00:00:29.100
+Artificially intelligent systems are analyzing
+/huge/ amounts of data that we’re generating
+
+00:00:29.100 --> 00:00:32.259
+every day, to infer patterns and predict likely futures.
+
+00:00:32.260 --> 00:00:36.120
+Like the amount of yogurt people might buy next week at the grocery store,
+
+00:00:36.120 --> 00:00:38.260
+so the store knows how much to stock.
+
+00:00:38.260 --> 00:00:41.900
+Everyone seems to be talking about AI and
+how it’s going to revolutionize the world
+
+00:00:41.900 --> 00:00:43.860
+or create some dystopian future.
+
+00:00:43.860 --> 00:00:48.500
+While we don’t know what the future
+holds, we at Crash Course believe that creating
+
+00:00:48.500 --> 00:00:51.670
+a better outcome starts with a better understanding.
+
+00:00:51.670 --> 00:00:55.960
+The goal of this course is to teach the logic behind AI by tracing its history, examining
+
+00:00:55.960 --> 00:01:00.140
+how it’s being used today, and showing some practical examples.
+
+00:01:00.140 --> 00:01:04.540
+And we’re going to try something a little
+different, we’ll work together on labs,
+
+00:01:04.540 --> 00:01:09.280
+writing and implementing code to program our
+very own AI systems!
+
+00:01:09.280 --> 00:01:15.720
+Along the way, we’ll spend several episodes
+on a hot area of AI known as machine learning.
+
+00:01:15.720 --> 00:01:19.460
+Using the brain as inspiration, these
+AI can learn from examples.
+
+00:01:19.460 --> 00:01:23.340
+We’ve taught machines to recognize people
+in photos, predict the next word we’re going
+
+00:01:23.340 --> 00:01:27.470
+to type on our phones, and recommend videos
+for us on YouTube!
+
+00:01:27.470 --> 00:01:30.000
+But AI is broader than just machine learning.
+
+00:01:30.000 --> 00:01:35.210
+So we’ll talk about how AI systems
+can act based on plans, rules, and logical
+
+00:01:35.210 --> 00:01:36.920
+representations of the world.
+
+00:01:36.920 --> 00:01:41.640
+These are the kinds of algorithms that are
+used to plan the path of a delivery-drone
+
+00:01:41.640 --> 00:01:44.960
+or determine the best move in a game of chess.
+
+00:01:44.960 --> 00:01:48.880
+But before we get into all the technical stuff, I should introduce myself.
+
+00:01:48.890 --> 00:01:51.500
+I’m your human-host, Jabril!
+
+00:01:51.500 --> 00:01:55.640
+I have a YouTube channel called Jabrils, where
+I look for interesting problems, be it personal
+
+00:01:55.640 --> 00:02:00.810
+or universal, try to solve them using code,
+and vlog my adventures and mistakes along
+
+00:02:00.810 --> 00:02:01.500
+the way!
+
+00:02:01.500 --> 00:02:05.540
+I got my start in machine learning when I
+decided to build a machine learning game from
+
+00:02:05.550 --> 00:02:06.540
+scratch.
+
+00:02:06.550 --> 00:02:10.229
+I didn’t have any prior knowledge on the
+subject, which I think ended up helping it
+
+00:02:10.229 --> 00:02:11.439
+resonate with people.
+
+00:02:11.440 --> 00:02:16.860
+Now I’m hosting Crash Course AI, and I’m
+not doing it alone!
+
+00:02:16.860 --> 00:02:23.640
+John Green Bot?
+
+00:02:23.640 --> 00:02:29.700
+This is my non-human sidekick, John-Green-bot, who will help me demonstrate some core ideas and show
+
+00:02:29.700 --> 00:02:32.799
+the limits and possibilities of current AI.
+
+00:02:32.800 --> 00:02:35.340
+John Green Bot: Greetings, human viewers.
+
+00:02:35.340 --> 00:02:39.580
+Now, I’m excited to learn about AI, I because I want to be able to go to new cities &amp; be
+
+00:02:39.580 --> 00:02:46.120
+guaranteed to get the type of pizza that I
+think is tastiest, not necessarily what’s most popular.
+
+00:02:46.120 --> 00:02:51.360
+Or when I go to the doctor, I could get a
+prescription specifically tailored to me and
+
+00:02:51.360 --> 00:02:56.360
+my exact symptoms. With AI this type of future is possible.
+
+00:02:56.379 --> 00:03:02.219
+AI is still a new field, so there are a lot
+of problems to solve but not that many people
+
+00:03:02.219 --> 00:03:03.769
+trying to solve them.
+
+00:03:03.769 --> 00:03:08.739
+We also have to think about what the future
+of AI means for us as humans, &amp; I believe
+
+00:03:08.739 --> 00:03:13.749
+it’s in our best interest to have as many
+people as possible who understand the field of AI
+
+00:03:13.749 --> 00:03:15.920
+so that the conversation can expand.
+
+00:03:15.920 --> 00:03:17.239
+Thanks for watching.
+
+00:03:17.240 --> 00:03:19.900
+And as they say in John Green Bot’s hometown…
+
+00:03:19.900 --> 00:03:23.069
+John Green Bot: Don’t Forget To Be Blossom!
+
+00:03:23.069 --> 00:03:23.760
+No.
+
+00:03:23.760 --> 00:03:24.720
+John Green Bot.
+
+00:03:24.720 --> 00:03:25.660
+AWESOME.
+
+00:03:25.660 --> 00:03:27.960
+Don’t forget to be AWESOME.
+
+00:03:27.970 --> 00:03:30.160
+We’ll see you guys next week!
+
+00:03:30.170 --> 00:03:32.939
+Thanks to PBS for sponsoring Crash Course AI!
+
+00:03:32.939 --> 00:03:37.439
+If you want to help keep Crash Course free
+for everyone, forever, you can join our community
+
+00:03:37.439 --> 00:03:38.439
+on Patreon.
+
+00:03:38.440 --> 00:03:46.800
+And if you want to keep learning from this
+course, click the playlist below.
+
