@@ -30,6 +30,9 @@ stop = set(stopwords.words("english"))
 exclude = set(string.punctuation) 
 lemma = WordNetLemmatizer()
 
+GOOGLE_CHROME_PATH = '/app/.apt/usr/bin/google_chrome'
+CHROMEDRIVER_PATH = '/app/.chromedriver/bin/chromedriver'
+
 def clean(doc):
     stop_free = " ".join([i for i in doc.lower().split() if i not in stop])
     punc_free = ''.join(ch for ch in stop_free if ch not in exclude)
@@ -68,6 +71,7 @@ class BaseMonty():
         options = webdriver.ChromeOptions()
         options.add_argument("mute-audio")
         options.add_argument("start-fullscreen")
+        options.add_argument("--disable-gpu")
         options.add_argument('no-sandbox')
         options.add_argument("disable-dev-shm-usage")
         options.add_argument("headless")
@@ -78,7 +82,8 @@ class BaseMonty():
                 'safebrowsing.enabled': True
             }
         )
-        driver = webdriver.Chrome(options=options)
+        options.binary_location = GOOGLE_CHROME_PATH
+        driver = webdriver.Chrome(execution_path=CHROMEDRIVER_PATH,options=options)
         max_screen_width = driver.get_window_size().get('width')
         max_screen_height = driver.get_window_size().get('height')
         return start_datetime, start, driver, max_screen_width, max_screen_height
