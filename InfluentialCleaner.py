@@ -24,16 +24,19 @@ def GoogleBlogsCleaner(i_blogs_links, i_blogs_articles):
             raw_data = i_blogs_url.text
             blog_soup = BeautifulSoup(raw_data, 'html.parser')
             blog = blog_soup.find_all("p")
-            nlp = spacy.load('en')
+            #nlp = spacy.load('en')
             for i in blog:
                 try:
                     text = i.get_text()
-                    text = re.sub("\n", "", text)
-                    if text[-1] in punctuation:
-                        entities = nlp(text)
-                        for j in entities.ents:
-                            i_blogs_entities.append(j)
-                        i_blogs_corpus.append(text)
+                    if 'en' in str(detect_langs(text)[0]):
+                        text = re.sub("\n", "", text)
+                        text = re.sub("–", "", text)
+                        text = re.sub("•", "", text)
+                        text = re.sub("—", "", text)
+                        text = re.sub('—', "", text)
+                        text = re.sub('–', "", text)
+                        if text[-1] in punctuation:
+                            i_blogs_corpus.append(text)
                 except:
                     pass
             n += 1
@@ -60,22 +63,30 @@ def MediumCleaner(i_medium_links):
             raw_data = i_medium_url.text
             medium_soup = BeautifulSoup(raw_data, 'html.parser')
             header = medium_soup.find_all("h1")[0]
-            print("    "+str(n)+". Reading:", header.get_text())
+            header = header.get_text()
+            print("    "+str(n)+". Reading:", header)
             author = medium_soup.find_all("a", class_="ds-link")
-            i_medium_authors.append(author[0].get_text())
+            if len(author)>0:
+                author = author[0].get_text()
+            #i_medium_authors.append(author[0].get_text())
             date = medium_soup.find_all("time")
-            i_medium_dates.append(date[0].get_text())
+            if len(date)>0:
+                date = date[0].get_text()
+            #i_medium_dates.append(date[0].get_text())
             blog = medium_soup.find_all("p")
-            nlp = spacy.load('en')
+            #nlp = spacy.load('en')
             for i in blog:
                 try:
                     text = i.get_text()
-                    text = re.sub("\n", "", text)
-                    if text[-1] in punctuation:
-                        entities = nlp(text)
-                        for j in entities.ents:
-                            i_medium_entities.append(j)
-                        i_medium_corpus.append(text)
+                    if 'en' in str(detect_langs(text)[0]):
+                        text = re.sub("\n", "", text)
+                        text = re.sub("–", "", text)
+                        text = re.sub("•", "", text)
+                        text = re.sub("—", "", text)
+                        text = re.sub('—', "", text)
+                        text = re.sub('–', "", text)
+                        if text[-1] in punctuation:
+                            i_medium_corpus.append(text)
                 except:
                     pass
             n += 1
@@ -98,11 +109,16 @@ def ElsevierCleaner(i_elsevier_titles, i_elsevier_links, driver):
                 driver.get(i)
                 print("    "+str(n)+". Reading:", i_elsevier_titles[m])
                 text = driver.find_element_by_class_name("Abstracts").text
-                text = re.sub("Abstract\n", "", text)
-                text = re.sub("Highlights\n", "", text)
-                text = re.sub("•\n", "", text)
-                text = re.sub("\n", "", text)
-                i_elsevier_abstracts.append(text)
+                if 'en' in str(detect_langs(text)[0]):
+                    text = re.sub("Abstract\n", "", text)
+                    text = re.sub("Highlights\n", "", text)
+                    text = re.sub("\n", "", text)
+                    text = re.sub("–", "", text)
+                    text = re.sub("•", "", text)
+                    text = re.sub("—", "", text)
+                    text = re.sub('—', "", text)
+                    text = re.sub('–', "", text)
+                    i_elsevier_abstracts.append(text)
                 n += 1
                 m += 1
             except:
@@ -137,10 +153,19 @@ def ArXivCleaner(i_arxiv_links, i_arxiv_titles):
             abstract = arxiv_soup.find_all("blockquote", class_="abstract")[0]
             abstract = abstract.get_text()
             abstract = re.sub('Abstract:  ', '', abstract)
-            abstract = re.sub("\n", " ", abstract)
-            i_arxiv_abstracts.append(abstract)
-            n += 1
-            m += 1
+            if 'en' in str(detect_langs(abstract)[0]):
+                abstract = re.sub("\n", "", abstract)
+                abstract = re.sub("–", "", abstract)
+                abstract = re.sub("•", "", abstract)
+                abstract = re.sub("—", "", abstract)
+                abstract = re.sub('—', "", abstract)
+                abstract = re.sub('–', "", abstract)
+                i_arxiv_abstracts.append(abstract)
+                n += 1
+                m += 1
+            else:
+                n += 1
+                m += 1
         except:
             print("    ----> Faulty link, moving onto the next one...")
             n += 1

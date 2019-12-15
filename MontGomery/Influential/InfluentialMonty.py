@@ -16,13 +16,9 @@ class InfluentialMonty():
         print("MontGomery's Influential Tour...")
         print("=========================================\n")
         # Now to search Google News
-        driver.get("https://google.com")
-        time.sleep(1)
-        driver.implicitly_wait(10)
-        search = driver.find_element_by_class_name("gLFyf")
-        search.click()
-        search.send_keys(search_me)
-        search.send_keys(Keys.RETURN)
+        query = search_me.replace(" ", "+")
+        source = "&tbm=nws&source=lnt&tbs=nrt:b&sa=X&ved=0ahUKEwjproXI2tLiAhVfTxUIHeoMDOMQpwUIHw&biw=1355&bih=725&dpr=2"
+        driver.get("https://google.co.uk/search?q="+query+source)
         time.sleep(1)
         # Select News from google
         buzzword = "News"
@@ -140,7 +136,7 @@ class InfluentialMonty():
     def getMedium(self, search_me, driver, X):
         n=0
         while True:
-            if n<20:
+            if n<40:
                 driver.execute_script("window.scrollTo(0, 10000000)")
                 time.sleep(1)
                 n+=1

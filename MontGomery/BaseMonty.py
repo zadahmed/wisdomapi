@@ -40,13 +40,13 @@ def frequency_processor(corpus):
     formatted_article_text = article_text[0].lower()
     formatted_article_text = re.sub(r'[^\w\s]',' ',formatted_article_text)
     formatted_article_text = " ".join(x for x in formatted_article_text.split() if x not in stop)
-    sentence_list = nltk.sent_tokenize(article_text[0])
+    formatted_article_text = formatted_article_text.encode('utf-8')
+    article_text_sent = article_text[0].decode('utf-8')
+    sentence_list = nltk.sent_tokenize(article_text_sent)
     frequency = pd.value_counts(formatted_article_text.split(" ")).reset_index()
     frequency.columns = ["words", "frequency"]
     frequency = frequency[frequency["words"] != "-"]
     frequency = frequency[frequency["words"] != "_"]
-    frequency = frequency[frequency["words"] != '–']
-    frequency = frequency[frequency["words"] != '—']
     maximum_frequency = max(frequency["frequency"].values)
     frequency["weighted_frequency"] = frequency["frequency"]/maximum_frequency
     for i, word in enumerate(frequency["words"]):

@@ -240,13 +240,9 @@ class TopicalMonty():
 
     def montyReadingTime(self, search_me, driver, X):
         # Now to search Google News
-        driver.get("https://google.com")
-        #time.sleep(1)
-        driver.implicitly_wait(10)
-        search = driver.find_element_by_class_name("gLFyf")
-        search.click()
-        search.send_keys(search_me)
-        search.send_keys(Keys.RETURN)
+        query = search_me.replace(" ", "+")
+        source = "&source=lnms&tbm=nws&sa=X&ved=0ahUKEwiAz5GF5dLiAhW0qHEKHZIjCxEQ_AUIEygE&cshid=1559753093567875&biw=1440&bih=798"
+        driver.get("https://google.co.uk/search?q="+query+source)
         time.sleep(1)
         # find related searches
         try:
