@@ -30,8 +30,8 @@ stop = set(stopwords.words("english"))
 exclude = set(string.punctuation) 
 lemma = WordNetLemmatizer()
 
-GOOGLE_CHROME_PATH = '/app/.apt/usr/bin/google_chrome'
 CHROMEDRIVER_PATH = '/app/.chromedriver/bin/chromedriver'
+GOOGLE_CHROME_SHIM = os.getenv('GOOGLE_CHROME_SHIM',"chromedriver")
 
 def clean(doc):
     stop_free = " ".join([i for i in doc.lower().split() if i not in stop])
@@ -69,6 +69,7 @@ class BaseMonty():
         start_datetime = datetime.today().strftime('%d-%m-%Y %H:%M:%S')
         start = time.time()
         options = webdriver.ChromeOptions()
+        options.binary_location = '/app/.apt/usr/bin/google-chrome-stable'
         options.add_argument("mute-audio")
         options.add_argument("start-fullscreen")
         options.add_argument("--disable-gpu")
