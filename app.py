@@ -4,7 +4,7 @@ from MontGomery.BaseMonty import BaseMonty
 from MontGomery.Factual.FactualMonty import FactualMonty
 from MontGomery.Topical.TopicalMonty import TopicalMonty
 from MontGomery.Influential.InfluentialMonty import InfluentialMonty
-
+import wptools
 
 from flask import Flask , request , jsonify
 import os
@@ -43,14 +43,17 @@ def search(search_me,search_topic , relevance,summary_points):
     try:
         if search_topic=="Factual":
             # Factual
-            f.goWikipediaWhat(search_me, driver)
-            f_wiki_soup = f.getWikipediaWhat(driver)
-            f.goWikipediaWhen(search_me, driver)
-            f_history_soup, f_history_type = f.getWikipediaWhen(driver, search_me)
-            f_what_summary, f_old_history_summary_sorted, f_history_summary_sorted = f.wikiSummary(f_wiki_soup, f_history_soup, f_history_type, search_me)
+            # f.goWikipediaWhat(search_me, driver)
+            # f_wiki_soup = f.getWikipediaWhat(driver)
+            # f.goWikipediaWhen(search_me, driver)
+            # f_history_soup, f_history_type = f.getWikipediaWhen(driver, search_me)
+            # f_what_summary, f_old_history_summary_sorted, f_history_summary_sorted = f.wikiSummary(f_wiki_soup, f_history_soup, f_history_type, search_me)
+            page = wptools.page(search_me.lower())
+            r = page.get()
+            f_what_summary = r.data['extext']
             print("\n")
             print("~"*50, " Wisdom ", "~"*50)
-            jsonobject = s.factualSummary(search_me, summary_points, f_what_summary, f_old_history_summary_sorted, f_history_summary_sorted)
+            jsonobject = s.factualSummary(search_me, summary_points, f_what_summary)
             return jsonobject
         elif search_topic=="Topical":
             # Topical

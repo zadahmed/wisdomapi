@@ -65,31 +65,31 @@ def frequency_processor(corpus):
 
 class BaseMonty():
     
-    def liftOff(self):
-        start_datetime = datetime.today().strftime('%d-%m-%Y %H:%M:%S')
-        start = time.time()
-        options = webdriver.ChromeOptions()
-        options.binary_location = '/app/.apt/usr/bin/google-chrome-stable'
-        options.add_argument("mute-audio")
-        options.add_argument("start-fullscreen")
-        options.add_argument("--disable-gpu")
-        options.add_argument('no-sandbox')
-        options.add_argument("disable-dev-shm-usage")
-        options.add_argument("headless")
-        options.add_experimental_option(
-            'prefs', {
-                'download.prompt_for_download': False,
-                'download.directory_upgrade': True,
-                'safebrowsing.enabled': True
-            }
-        )
-        driver = webdriver.Chrome(options=options)
-        max_screen_width = driver.get_window_size().get('width')
-        max_screen_height = driver.get_window_size().get('height')
-        return start_datetime, start, driver, max_screen_width, max_screen_height
+    # def liftOff(self):
+    #     start_datetime = datetime.today().strftime('%d-%m-%Y %H:%M:%S')
+    #     start = time.time()
+        # options = webdriver.ChromeOptions()
+        # options.binary_location = '/app/.apt/usr/bin/google-chrome-stable'
+        # options.add_argument("mute-audio")
+        # options.add_argument("start-fullscreen")
+        # options.add_argument("--disable-gpu")
+        # options.add_argument('no-sandbox')
+        # options.add_argument("disable-dev-shm-usage")
+        # options.add_argument("headless")
+        # options.add_experimental_option(
+        #     'prefs', {
+        #         'download.prompt_for_download': False,
+        #         'download.directory_upgrade': True,
+        #         'safebrowsing.enabled': True
+        #     }
+        # )
+        # driver = webdriver.Chrome(options=options)
+        # max_screen_width = driver.get_window_size().get('width')
+        # max_screen_height = driver.get_window_size().get('height')
+        # return start_datetime, start, driver, max_screen_width, max_screen_height
 
 
-    def factualSummary(self, search_me, Z, f_what_summary, f_old_history_summary_sorted, f_history_summary_sorted):
+    def factualSummary(self, search_me, Z, f_what_summary):
         f_what_final_summary = []
         for i in f_what_summary:
             dummy = i.split(".")
@@ -117,22 +117,22 @@ class BaseMonty():
         else:
             print(f_summary[0])
         # Factual timeline
-        print("\n============================== Timeline of [{}] \n".format(search_me))
-        if not f_old_history_summary_sorted:
-            print("----> No timeline by Century:\n")
-        else:
-            print("----> By Century:")
-            if f_old_history_summary_sorted:
-                for i in f_old_history_summary_sorted:
-                    print("-", i, "\n")
-        if not f_history_summary_sorted:
-            print("----> No timeline by Year:\n")
-        else:
-            print("----> By Year:")
-            if f_history_summary_sorted:
-                for i in f_history_summary_sorted:
-                    print("-", i, "\n")
-        return jsonify(search=search_me,summary=f_summary,old_history=f_old_history_summary_sorted,history=f_history_summary_sorted)
+        # print("\n============================== Timeline of [{}] \n".format(search_me))
+        # if not f_old_history_summary_sorted:
+        #     print("----> No timeline by Century:\n")
+        # else:
+        #     print("----> By Century:")
+        #     if f_old_history_summary_sorted:
+        #         for i in f_old_history_summary_sorted:
+        #             print("-", i, "\n")
+        # if not f_history_summary_sorted:
+        #     print("----> No timeline by Year:\n")
+        # else:
+        #     print("----> By Year:")
+        #     if f_history_summary_sorted:
+        #         for i in f_history_summary_sorted:
+        #             print("-", i, "\n")
+        return jsonify(search=search_me,summary=f_summary)
 
         
     def topicalSummary(self, search_me, t_news_corpus, t_video_corpus, Z):
