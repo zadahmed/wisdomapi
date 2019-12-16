@@ -15,7 +15,7 @@ langdetect==1.0.7
 flask==1.1.1
 gunicorn==20.0.4
 wptools==0.4.17
-
+arxiv==0.5.1
 # Use this to enter image and move file structure
 # $ docker run -it dockermonty sh
 

@@ -5,7 +5,7 @@ from MontGomery.Factual.FactualMonty import FactualMonty
 from MontGomery.Topical.TopicalMonty import TopicalMonty
 from MontGomery.Influential.InfluentialMonty import InfluentialMonty
 import wptools
-
+import arxiv
 from flask import Flask , request , jsonify
 import os
 import datetime
@@ -51,8 +51,27 @@ def search(search_me,search_topic , relevance,summary_points):
             page = wptools.page(search_me.lower())
             r = page.get()
             f_what_summary = r.data['extext']
+
+            result = arxiv.query(query=search_me,
+            id_list=[],
+            max_results=10,
+            start = 0,
+            sort_by="relevance",
+            sort_order="descending",
+            prune=True,
+            iterative=False,
+            max_chunk_results=10)
+            papers = []
+
+            for paper in result:
+                print(paper)
+                title = paper['summary']
+                value = paper['title_detail']['value']
+                print('\nSummary ' + title)
+                print('\nTitle ' + value)
+                papers.append([title,value])
             # jsonobject = s.factualSummary(search_me, summary_points, f_what_summary)
-            jsonob = jsonify(search= search_me , summary= f_what_summary)
+            jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers)
             return jsonob
         # elif search_topic=="Topical":
         #     # Topical
