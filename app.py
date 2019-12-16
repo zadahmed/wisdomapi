@@ -51,10 +51,12 @@ def search(search_me,search_topic , relevance,summary_points):
             page = wptools.page(search_me.lower())
             r = page.get()
             f_what_summary = r.data['extext']
+            print(f_what_summary)
             print("\n")
             print("~"*50, " Wisdom ", "~"*50)
-            jsonobject = s.factualSummary(search_me, summary_points, f_what_summary)
-            return jsonobject
+            # jsonobject = s.factualSummary(search_me, summary_points, f_what_summary)
+            jsonob = {search: search_me , summary: f_what_summary}
+            return jsonob
         # elif search_topic=="Topical":
         #     # Topical
         #     t.youtubeFilter(search_me, driver, max_screen_width, max_screen_height)
