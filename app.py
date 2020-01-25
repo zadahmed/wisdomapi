@@ -53,9 +53,11 @@ def search(search_me,search_topic , relevance,summary_points):
                 print(paper)
                 title = paper['summary']
                 value = paper['title_detail']['value']
+                pdf_url = paper['pdf_url']
                 print('\nSummary ' + title)
                 print('\nTitle ' + value)
-                papers.append([title,value])
+                print('\nPDF Url' + pdf_url)
+                papers.append([title,value,pdf_url])
             # jsonobject = s.factualSummary(search_me, summary_points, f_what_summary)
             jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers)
             return jsonob
