@@ -1,9 +1,6 @@
 import os
 # Import classes
 from MontGomery.BaseMonty import BaseMonty
-from MontGomery.Factual.FactualMonty import FactualMonty
-from MontGomery.Topical.TopicalMonty import TopicalMonty
-from MontGomery.Influential.InfluentialMonty import InfluentialMonty
 import wptools
 import arxiv
 from flask import Flask , request , jsonify
@@ -12,10 +9,6 @@ import os
 
 # Instantiate Monty
 s = BaseMonty()
-f = FactualMonty()
-t = TopicalMonty()
-i = InfluentialMonty()
-
 
 # Init App
 app = Flask(__name__)
@@ -50,12 +43,13 @@ def search(search_me,search_topic , relevance,summary_points):
             papers = []
 
             for paper in result:
-                print(paper)
                 title = paper['summary']
                 value = paper['title_detail']['value']
+                pdflink = paper['pdf_url']
                 print('\nSummary ' + title)
                 print('\nTitle ' + value)
-                papers.append([title,value])
+                print('\nPdf link' + pdflink)
+                papers.append([title,value,pdflink])
             # jsonobject = s.factualSummary(search_me, summary_points, f_what_summary)
             jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers)
             return jsonob
