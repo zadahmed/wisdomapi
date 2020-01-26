@@ -8,7 +8,6 @@ from PyPDF2 import PdfFileReader
 def abstractextracter(pdfurl):
     
     ######## Get all text from PDF url
-    pdfurl = "http://arxiv.org/pdf/1411.6753v1"+".pdf" # this is hard coded for testing, this should be the URL that the ARXIV api collects + ".pdf" at the end
     r = requests.get(pdfurl, stream=True)
     f = io.BytesIO(r.content)
     reader = PdfFileReader(f)
@@ -122,5 +121,4 @@ def abstractextracter(pdfurl):
     if abstract_string[:1] in string.punctuation or abstract_string[:1] == "—":
         abstract_string = abstract_string[1:]
     abstract_string = abstract_string.strip()
-    print("Abstract:\n\n", abstract_string)
     return abstract_string
