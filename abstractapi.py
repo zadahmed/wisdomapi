@@ -1,77 +1,101 @@
-import textract
-import string
+# Imports
 import re
 import requests
-
+import io
+from PyPDF2 import PdfFileReader
 
 def abstractextracter(pdfurl):
-    pdfurl = "http://arxiv.org/pdf/1411.6753v1"
+    
+    ######## Get all text from PDF url
+    pdfurl = "http://arxiv.org/pdf/1411.6753v1"+".pdf" # this is hard coded for testing, this should be the URL that the ARXIV api collects + ".pdf" at the end
     r = requests.get(pdfurl, stream=True)
-    pdfname = pdfurl[-7:]+'.pdf'
-    with open(pdfname, 'wb') as f:
-        f.write(r.content)
-
-    pdf = pdfname
-    try:
-        text = textract.process(pdf)
-    except:
-        # this method takes much longer... either keep this here or replace with error message for user
-        text = textract.process(pdf, method="tesseract", language="eng")
-    # decode text string from pdf
-    text = text.decode('utf-8')
-    # split at double breaks
+    f = io.BytesIO(r.content)
+    reader = PdfFileReader(f)
+    # Iterate through each page and collect all text
+    text = ""
+    page = 0
+    while True:
+        try:
+            content = reader.getPage(page).extractText()
+            text += content
+            page += 1
+        except:
+            break
+    
+    ######## Extract just the abstract text
     text = text.split("\n\n")
-    # collect abstract text
     abstract = []
     cnt = 0
-    while cnt < len(text):
-        if "abstract" in text[cnt].lower():
-            if "abstract" in text[cnt].lower() and len(text[cnt].split()) < 10:
-                cnt += 1
-            while True:
-                if "*" in text[cnt] and len(text[cnt].split()) < 10:
+    # Loop for PDF's that have weird "\n \n" breaks
+    if "\n \n" in " ".join(i for i in text):
+        content = []
+        for i in text:
+            for j in i.split("\n \n"):
+                content.append(re.sub("\n", "", j))
+        while cnt < len(content):
+            if "abstract" in content[cnt].lower():
+                if "abstract" in content[cnt].lower() and len(text[cnt].split()) < 10:
                     cnt += 1
-                elif len(text[cnt].split()) > 10:
-                    if "introduction" in text[cnt][:20].lower() or "i ntroduction" in text[cnt][:20].lower():
+                while True:
+                    if "introduction" in content[cnt].lower():
                         break
-                    abstract.append(text[cnt])
-                    cnt +=1
-                elif len(text[cnt].split()) == 1:
-                    try:
-                        int(text[cnt])
-                    except:
-                        break
-                    break
-                else:
-                    break
-            break
-        else:
-            cnt += 1
-    if not abstract:
-        stop = 0
-        while True:
-            if "introduction" in text[stop].lower() and len(text[stop].split()) < 5:
+                    abstract.append(content[cnt])
+                    cnt += 1
                 break
             else:
-                stop += 1
-        cnt = 0
-        while cnt < stop:
-            if text[cnt] == " " or len(text[cnt]) < 2:
-                if len(text[cnt+1].split()) < 10:
+                cnt += 1
+    # Loop for all other PDF's
+    else:
+        while cnt < len(text):
+            if "abstract" in text[cnt].lower():
+                if "abstract" in text[cnt].lower() and len(text[cnt].split()) < 10:
                     cnt += 1
+                while True:
+                    if "*" in text[cnt] and len(text[cnt].split()) < 10:
+                        cnt += 1
+                    elif len(text[cnt].split()) > 10:
+                        if "introduction" in text[cnt][:20].lower() or "i ntroduction" in text[cnt][:20].lower():
+                            break
+                        abstract.append(text[cnt])
+                        cnt +=1
+                    elif len(text[cnt].split()) == 1:
+                        try:
+                            int(text[cnt])
+                        except:
+                            break
+                        break
+                    else:
+                        break
+                break
+            else:
+                cnt += 1
+        if not abstract:
+            stop = 0
+            while True:
+                if "introduction" in text[stop].lower() and len(text[stop].split()) < 5:
+                    break
                 else:
-                    abstract.append(text[cnt+1])
-                    if text[cnt+1][-1] == "-" or text[cnt+1][:-1] == "-":
-                        while True:
-                            if text[cnt+2][0].islower():
-                                abstract.append(text[cnt+2])
-                                break
-                            else:
-                                cnt += 1
-            cnt += 1
-    # format abstract to present to user
+                    stop += 1
+            cnt = 0
+            while cnt < stop:
+                if text[cnt] == " " or len(text[cnt]) < 2:
+                    if len(text[cnt+1].split()) < 10:
+                        cnt += 1
+                    else:
+                        abstract.append(text[cnt+1])
+                        if text[cnt+1][-1] == "-" or text[cnt+1][:-1] == "-":
+                            while True:
+                                if text[cnt+2][0].islower():
+                                    abstract.append(text[cnt+2])
+                                    break
+                                else:
+                                    cnt += 1
+                cnt += 1
+                
+    ######## Format abstract text for presentation
     abstract_string = ""
     for a in abstract:
+        a = a.strip()
         a = re.sub("-\n", "", a)
         a = re.sub("\n", " ", a)
         if a[-1] not in string.punctuation:
