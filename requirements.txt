@@ -11,3 +11,4 @@ wptools==0.4.17
 arxiv==0.5.1
 PyPDF2==1.26.0
 textract==1.6.3
+pytesseract==0.3.2
