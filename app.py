@@ -6,6 +6,7 @@ import arxiv
 from flask import Flask , request , jsonify
 import os
 import abstractapi
+import urllib
 
 # Instantiate Monty
 s = BaseMonty()
@@ -22,7 +23,9 @@ def home():
 
 @app.route('/wisdom/<string:pdfurl>',methods=['GET'])
 def wisdom(pdfurl):
-    abstract = abstractapi.abstractextracter(pdfurl)
+    abstra = urllib.decode(pdfurl)
+    print(abstra)
+    abstract = abstractapi.abstractextracter(abstra)
     abstractjson = jsonify(wisdomabstract = abstract)
     return abstractjson
 
