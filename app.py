@@ -23,7 +23,6 @@ def home():
 
 @app.route('/wisdom/<path:pdfurl>',methods=['GET'])
 def wisdom(pdfurl):
-    print(pdfurl)
     abstract = abstractapi.abstractextracter(pdfurl)
     abstractjson = jsonify(wisdomabstract = abstract)
     return abstractjson
