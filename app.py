@@ -21,8 +21,9 @@ dir = os.path.abspath(os.path.dirname(__file__)) #  Directory
 def home():
     return jsonify({'msg':'Hello World'})
 
-@app.route('/wisdom/<string:pdfurl>',methods=['GET','POST'])
+@app.route('/wisdom/<url:pdfurl>',methods=['GET'])
 def wisdom(pdfurl):
+    print(pdfurl)
     abstra = unquote(pdfurl)
     updf = 'https://' + abstra
     print(updf)
