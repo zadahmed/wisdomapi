@@ -122,3 +122,4 @@ def abstractextracter(pdfurl):
         abstract_string = abstract_string[1:]
     abstract_string = abstract_string.strip()
     return abstract_string
+

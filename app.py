@@ -5,7 +5,7 @@ import wptools
 import arxiv
 from flask import Flask , request , jsonify
 import os
-
+import abstractapi
 
 # Instantiate Monty
 s = BaseMonty()
@@ -20,7 +20,11 @@ dir = os.path.abspath(os.path.dirname(__file__)) #  Directory
 def home():
     return jsonify({'msg':'Hello World'})
 
-
+@app.route('/wisdom/<string:pdfurl>',methods=['GET'])
+def wisdom(pdfurl):
+    abstract = abstractapi.abstractextracter(pdfurl)
+    abstractjson = jsonify(wisdomabstract = abstract)
+    return abstractjson
 
 @app.route('/search/<string:search_me>/<string:search_topic>/<int:relevance>/<int:summary_points>',methods = ['GET'])
 def search(search_me,search_topic , relevance,summary_points):
