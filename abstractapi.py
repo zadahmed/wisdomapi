@@ -5,6 +5,8 @@ import re
 from pathlib import Path
 import requests
 import os
+import pytesseract
+from pdf2image import convert_from_path
 
 
 def abstractextracter(pdfurl):
@@ -13,14 +15,20 @@ def abstractextracter(pdfurl):
     pdf = Path(url_name+".pdf")
     response = requests.get(pdfurl)
     pdf.write_bytes(response.content)
-    # extract text
-    try:
-        text = textract.process(pdf)
-    except:
-        # this method takes much longer... either keep this here or replace with error message for user
-        text = textract.process(pdf, method="tesseract", language="eng")
-    # decode text string from pdf
-    text = text.decode('utf-8')
+    # extract text and stop after abstract
+    pages = convert_from_path(pdf)
+    text = ""
+    # Iterate through all the pages stored above 
+    for page in pages: 
+        page.save("temp.jpg", 'JPEG') 
+        filename = "temp.jpg" 
+        # Recognize the text as string in image using pytesserct 
+        out = pytesseract.image_to_string("temp.jpg")
+        text += out
+        os.remove("temp.jpg")
+        # stop when abstract has been found
+        if "abstract" in out.lower():
+            break
     # split at double breaks
     text = text.split("\n\n")
     # collect abstract text
