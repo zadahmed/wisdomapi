@@ -13,7 +13,6 @@ from pdf2image import convert_from_path
 
 
 def abstractextracter(pdfurl):
-    # download pdf from url
     url_name = pdfurl.split("/")[-1]
     if ".pdf" not in url_name:
         pdf = Path(url_name+".pdf")
