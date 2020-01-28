@@ -1,6 +1,4 @@
 import os
-# Import classes
-from MontGomery.BaseMonty import BaseMonty
 import wptools
 import arxiv
 from flask import Flask , request , jsonify
@@ -8,8 +6,6 @@ import os
 import abstractapi
 from urllib.parse import unquote
 
-# Instantiate Monty
-s = BaseMonty()
 
 # Init App
 app = Flask(__name__)
