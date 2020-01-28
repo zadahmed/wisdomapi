@@ -1,5 +1,4 @@
 # imports
-import textract
 import string
 import re
 from pathlib import Path
