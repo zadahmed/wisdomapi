@@ -12,13 +12,15 @@ from wand.image import Image
 def abstractextracter(pdfurl):
     # download pdf from url
     url_name = pdfurl.split("/")[-1]
-    pdf = Path(url_name+".pdf")
+    if ".pdf" not in url_name:
+        pdf = Path(url_name+".pdf")
+    pdf = Path(url_name)
     response = requests.get(pdfurl)
     pdf.write_bytes(response.content)
     # extract text and stop after abstract
     text = ""
     # Iterate through all the pages stored above 
-    with(Image(filename=pdf, resolution=500)) as source: 
+    with(Image(filename=pdf, resolution=300)) as source: 
         for i, image in enumerate(source.sequence):
             Image(image).save(filename="temp.jpg")
             out = pytesseract.image_to_string("temp.jpg")
