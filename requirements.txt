@@ -10,3 +10,4 @@ wptools==0.4.17
 arxiv==0.5.1
 pytesseract==0.3.2
 pdf2image==1.11.0
+Wand==0.5.8
