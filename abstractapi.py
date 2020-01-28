@@ -21,7 +21,7 @@ def abstractextracter(pdfurl):
     # extract text and stop after abstract
     text = ""
     pdf = pdfplumber.open(url_name)
-    page = pdf.pages[0]
+    page = pdf.pages[1]
     text = page.extract_text()
     return text
     # # Iterate through all the pages stored above 
