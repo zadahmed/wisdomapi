@@ -7,6 +7,4 @@ flask==1.1.1
 gunicorn==20.0.4
 wptools==0.4.17
 arxiv==0.5.1
-pytesseract==0.3.2
-pdf2image==1.11.0
-Wand==0.5.8
+pdfplumber==0.5.16
