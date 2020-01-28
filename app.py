@@ -7,7 +7,6 @@ import abstractapi
 from urllib.parse import unquote
 
 
-# Init App
 app = Flask(__name__)
 dir = os.path.abspath(os.path.dirname(__file__)) #  Directory
 
