@@ -5,14 +5,11 @@ from pathlib import Path
 import requests
 import os
 import pytesseract
-<<<<<<< HEAD
 from wand.image import Image
-=======
-from pdf2image import convert_from_path
->>>>>>> sdcs
 
 
 def abstractextracter(pdfurl):
+    # download pdf from url
     url_name = pdfurl.split("/")[-1]
     if ".pdf" not in url_name:
         pdf = Path(url_name+".pdf")
@@ -20,7 +17,6 @@ def abstractextracter(pdfurl):
     response = requests.get(pdfurl)
     pdf.write_bytes(response.content)
     # extract text and stop after abstract
-<<<<<<< HEAD
     text = ""
     # Iterate through all the pages stored above 
     with(Image(filename=pdf, resolution=300)) as source: 
@@ -32,21 +28,6 @@ def abstractextracter(pdfurl):
             # stop when abstract has been found
             if "abstract" in out.lower():
                 break
-=======
-    pages = convert_from_path(pdf)
-    text = ""
-    # Iterate through all the pages stored above 
-    for page in pages: 
-        page.save("temp.jpg", 'JPEG') 
-        filename = "temp.jpg" 
-        # Recognize the text as string in image using pytesserct 
-        out = pytesseract.image_to_string("temp.jpg")
-        text += out
-        os.remove("temp.jpg")
-        # stop when abstract has been found
-        if "abstract" in out.lower():
-            break
->>>>>>> sdcs
     # split at double breaks
     text = text.split("\n\n")
     # collect abstract text
