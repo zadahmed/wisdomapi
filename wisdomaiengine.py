@@ -144,3 +144,4 @@ def abstractextracter(pdfurl):
     abstract = re.sub("  ", " ", abstract)
     # clean up and return abstract
     return abstract
+
