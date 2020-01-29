@@ -7,10 +7,14 @@ from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfpage import PDFPage
+from textblob import TextBlob
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.text_rank import TextRankSummarizer
 
 def abstractextracter(pdfurl):
     """
-    Abstract Extracter
+    Abstract extracter
     ------------------
     This function extracts the abstract from a pdf from a web link
     
@@ -145,3 +149,167 @@ def abstractextracter(pdfurl):
     # clean up and return abstract
     return abstract
 
+
+def summarisepdfdocument(pdfurl):
+    """
+    Summarise PDF research document
+    ------------------
+    This function summarises the 5 key points from a PDF research document
+    
+    INPUT:
+    - pdfurl (string): url of PDF
+    
+    OUTPUT:
+    - doc_summary (list): summary containing top 5 points from PDF document. Points are ranked by important, 1st = most important.
+    
+    """
+    # get bytes stream of web pdf
+    r = requests.get(pdfurl, stream=True)
+    f = io.BytesIO(r.content)
+    # set up pdfminer
+    rsrcmgr = PDFResourceManager()
+    retstr = io.StringIO()
+    codec = 'utf-8'
+    laparams = LAParams()
+    device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
+    pagenos=set()
+    # extract all text
+    content = []
+    for page in PDFPage.get_pages(fp=f, pagenos=pagenos, maxpages=0, caching=True, check_extractable=True):
+        interpreter.process_page(page)
+    text = retstr.getvalue()
+    content.append(text)
+    # close apps
+    device.close()
+    retstr.close()
+    # remove noise and numbers at side of document
+    text = []
+    splits = content[0].split("\n\n")
+    for chunk in splits:
+        # if ocr has picked up annoying numbers along side with many "\n"
+        if chunk.count("\n") >= 3:
+            dummy = chunk.split("\n")
+            dummy_cnt = 0
+            for d in dummy:
+                if len(d)>1:
+                    dummy_cnt += 1
+            if dummy_cnt > 2:
+                text.append(chunk)
+        else:
+            text.append(chunk)
+    # identify abstract
+    if "abstract" in " ".join(i for i in text).lower():
+        cnt = 0
+        while True:
+            if "abstract" in text[cnt].lower():
+                if len(text[cnt].split()) < 2:
+                    cnt += 1
+                    break
+                else:
+                    if re.match("^abstract", text[cnt][:8].lower()):
+                        text[cnt] = text[cnt][8:]
+                    break
+            cnt += 1
+        text = text[cnt:]
+    # identify references
+    cnt = 0
+    while True:
+        if "References" in text[cnt] or "Appendix" in text[cnt] or "Bibliography" in text[cnt] or "REFERENCES" in text[cnt] or "acknowledgements" in text[cnt] or "ACKNOWLEDGEMENTS" in text[cnt]:
+            if len(text[cnt].split()) < 3:
+                break
+            if "\n" in text[cnt]:
+                break
+        cnt += 1
+    text = text[:cnt]
+    # remove equation number references
+    clean1 = []
+    for t in text:
+        if len(t.split()) == 1:
+            if re.match("^\(\d\)", t):
+                pass
+            if re.match("\d", t):
+                pass
+        elif len(t.split()) == 0:
+            pass
+        else:
+            clean1.append(t)
+    # remove headers
+    clean2 = []
+    cnt = 0
+    while cnt < len(clean1):
+        if len(clean1[cnt].split()) < 10:
+            dummy = re.sub("\d", "", clean1[cnt])
+            dummy = dummy.strip()
+            if len(dummy.split()) <= 1:
+                pass
+            elif dummy[-1] not in string.punctuation:
+                dummy2 = re.sub("\d", "", clean1[cnt+1])
+                dummy2 = re.sub('[^\w\s]','', dummy2)
+                dummy2 = dummy2.strip()
+                if dummy2:
+                    if dummy2[0].isupper():
+                        pass
+                    else:
+                        clean2.append(clean1[cnt])
+                else:
+                    pass
+            else:
+                clean2.append(clean1[cnt])
+        else:
+            clean2.append(clean1[cnt])
+        cnt += 1
+    # remove figure captions
+    clean3 = []
+    cnt = 0
+    while cnt < len(clean2):
+        if re.match('^Fig', clean2[cnt]) or re.match('^fig.', clean2[cnt].lower()) :
+            pass
+        else:
+            clean3.append(clean2[cnt])
+        cnt += 1
+    # remove table data
+    clean4 = []
+    cnt = 0
+    while cnt < len(clean3)-1:
+        if clean3[cnt][-1] == ".":
+            if re.sub("\d", "", clean3[cnt+1]).strip()[0].islower():
+                pass
+            else:
+                clean4.append(clean3[cnt])
+        elif clean3[cnt][-1] == "-" or clean3[cnt][-1] == "-":
+            if clean3[cnt+1][0].islower():
+                clean4.append(clean3[cnt])
+            else:
+                pass
+        elif "©" in clean3[cnt]:
+            pass
+        else:
+            clean4.append(clean3[cnt])
+        cnt += 1
+    # remove citations
+    clean5 = " ".join(c for c in clean4)
+    clean5 = re.sub("^\[\d\]", "", clean5)
+    clean5 = re.sub("^\[\d\d\]", "", clean5)
+    clean5 = re.sub("^\[\d\d\]", "", clean5)
+    clean5 = re.sub("-\n", "", clean5)
+    clean5 = re.sub("\n", " ", clean5)
+    clean5 = re.sub("  ", " ", clean5)
+    # Summarisation of top 5 key points
+    key_points = 5
+    summary = []
+    blob = TextBlob(clean5)
+    sentences = [str(sentence) for sentence in blob.sentences]
+    for sentence in sentences:
+        if sentence.find(":", 0, 1) != -1 and sentence.find("-", 1, 3) != -1:
+            pass
+        else:
+            if len(sentence)>2:
+                if len(sentence.split()) < 150:
+                    summary.append(sentence)
+    parser = PlaintextParser.from_string(' '.join(str(sentence) for sentence in summary), Tokenizer("english"))
+    summarizer = TextRankSummarizer()
+    doc_summary = summarizer(parser.document, key_points)
+    doc_summary = [str(sentence) for sentence in doc_summary]
+    return doc_summary
+    
