@@ -35,10 +35,10 @@ def abstractextracter(pdfurl):
     content = []
     for page in PDFPage.get_pages(f, caching=True, check_extractable=True):
         interpreter.process_page(page)
-        text = retstr.getvalue()
-        content.append(text)
-        if "abstract" in text.lower():
+        if "abstract" in retstr.getvalue().lower():
             break
+    text = retstr.getvalue()
+    content.append(text)
     # close apps
     device.close()
     retstr.close()
