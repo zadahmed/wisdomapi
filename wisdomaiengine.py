@@ -40,7 +40,7 @@ def clean(doc):
     return normalized
 
 def frequency_processor(corpus):
-    all_text = ' '.join(i for i in corpus)
+    all_text = ' '.join(i[0] for i in corpus)
     formatted_all_text = all_text.lower()
     formatted_all_text = re.sub(r'[^\w\s]',' ',formatted_all_text)
     formatted_all_text = " ".join(x for x in formatted_all_text.split() if x not in stop)
@@ -469,7 +469,7 @@ def wordcloud(search_term, corpus):
             # create dataframe of top N
             top_N = pd.DataFrame(frequency.groupby("lemmatized word")["tf_idf"].sum())
             top_N = top_N.sort_values(by=["tf_idf"], ascending=False)
-            split = search_term.split()
+            split = search_term.lower().split()
             counter1=0
             counter2=1
             # remove words that are within search term
