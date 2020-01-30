@@ -11,7 +11,33 @@ from textblob import TextBlob
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.text_rank import TextRankSummarizer
+from nltk.corpus import stopwords 
+from nltk.stem.wordnet import WordNetLemmatizer
+import gensim
+from gensim import corpora
 
+
+# global variables and functions
+stop = set(stopwords.words("english"))
+exclude = set(string.punctuation) 
+lemma = WordNetLemmatizer()
+
+extras = ["et", "al", "le", "eg"]
+for extra in extras:
+    stop.add(extra)
+    
+extras = ["•", "−"]
+for extra in extras:
+    exclude.add(extra)
+
+def clean(doc):
+    stop_free = " ".join([i for i in doc.lower().split() if i not in stop])
+    punc_free = ''.join(ch for ch in stop_free if ch not in exclude)
+    normalized = " ".join(lemma.lemmatize(word) for word in punc_free.split())
+    return normalized
+
+
+# APIs
 def abstractextracter(pdfurl):
     """
     Abstract extracter
@@ -330,4 +356,60 @@ def summarisepdfdocument(text):
     doc_summary = summarizer(parser.document, key_points)
     doc_summary = [str(sentence) for sentence in doc_summary]
     return doc_summary
+
+
+def topicsindocument(text):
+    """
+    Topical analysis of PDF research document
+    ------------------
+    This function extracts key topics within PDF research document
     
+    INPUT:
+    - text (string): all extracted text from PDF research document
+    
+    OUTPUT:
+    - topics (list): list of up to 5 topics from document. Each topic consists of up to 5 words.
+    
+    """
+    # global variables
+    num_topics = 5
+    num_words = 5
+    # normalize text
+    topics = []
+    text_normalized = clean(text).split()
+    text_normalized = [[i for i in text_normalized if i not in stop]]
+    # create document term matrix
+    dictionary = corpora.Dictionary(text_normalized)
+    doc_term_matrix = [dictionary.doc2bow(doc) for doc in text_normalized]
+    # fit LDA model
+    LDA = gensim.models.ldamodel.LdaModel
+    LDA_fit = LDA(doc_term_matrix, num_topics=num_topics, id2word=dictionary, passes=300)
+    # create list of topics and remove duplicates
+    topics_list = [t for t in LDA_fit.print_topics(num_topics=-1, num_words=num_words)]
+    for topic in topics_list:
+        t = topic[1]
+        topics.append(t)
+    topics = set(topics)
+    # clean up topics for presentation
+    final_topics = []
+    for topic in topics:
+        t = topic.replace('"', '')
+        t = t.split('*')[1:]
+        t = [j.split(" + ")[0] for j in t]
+        new_topic = []
+        for j in t:
+            if j == ' ':
+                pass
+            elif j == '':
+                pass
+            else:
+                new_topic.append(j.strip())
+        final_topics.append(new_topic)
+    # format topics and return
+    if final_topics[0][0] == "":
+        final_topics = None
+    else:
+        final_topics = [' + '.join(word for word in topic) for topic in final_topics]
+    return final_topics
+
+
