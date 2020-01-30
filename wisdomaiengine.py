@@ -295,7 +295,7 @@ def pdfdocumentextracter(pdfurl):
     # remove headers
     clean2 = []
     cnt = 0
-    while cnt < len(clean1):
+    while cnt < len(clean1)-1:
         if len(clean1[cnt].split()) < 10:
             dummy = re.sub("\d", "", clean1[cnt])
             dummy = dummy.strip()
