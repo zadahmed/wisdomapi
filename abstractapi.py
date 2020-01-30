@@ -1,167 +1,146 @@
-# imports
-import pdfplumber
-from pathlib import Path
+# import packages
+import io
+import string
 import requests
 import re
-import string
-import os
+from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+from pdfminer.converter import TextConverter
+from pdfminer.layout import LAParams
+from pdfminer.pdfpage import PDFPage
 
 def abstractextracter(pdfurl):
-    # download pdf
-    url_name = pdfurl.split("/")[-1]
-    if ".pdf" not in url_name:
-        pdf = Path(url_name+".pdf")
-        url_name += ".pdf"
-    else:
-        pdf = Path(url_name)
-    response = requests.get(pdfurl)
-    pdf.write_bytes(response.content);
-    # get page number for abstract
-    pdf = pdfplumber.open(url_name)
-    cnt = 0
-    while True:
-        try:
-            page = pdf.pages[cnt]
-            if "abstract" in page.extract_text().lower():
-                break
-            elif "introduction" in page.extract_text().lower():
-                break
-            else:
-                cnt += 1
-        except:
-            cnt = 0
-            break
-        break
-    # get bounding box for text
-    page = pdf.pages[cnt]
-    text = page.extract_words()
-    x0 = []
-    x1 = []
-    top = []
-    bottom = []
-    for i in text:
-        x0.append(float(i.get('x0')))
-        x1.append(float(i.get('x1')))
-        top.append(float(i.get('top')))
-        bottom.append(float(i.get('bottom')))
-    # identify abstract region
-    x0.sort()
-    x0 = list(set(x0))
-    dist = []
-    cnt = 0
-    while cnt < len(x0)-1:
-        dist.append(x0[cnt+1]-x0[cnt])
-        cnt += 1
-    if max(dist) == dist[0]:
-        x_min = min([float(i.get('x1')) for i in text if float(i.get('x0')) == min(x0)])
-    else: 
-        x_min = min(x0)
-    # if Author = IEEE split bounding box down the middle for double columns
-    if pdf.metadata.get("Author") == "IEEE":
-        coords = (35, min(top), float(page.width/2), max(bottom))
-    else:
-        coords = (35, min(top), max(x1), max(bottom))
-    # crop pdf
-    cropped = page.within_bbox(coords)
-    content = cropped.extract_text(x_tolerance=1)
+    """
+    Abstract Extracter
+    ------------------
+    This function extracts the abstract from a pdf from a web link
+    
+    INPUT:
+    - pdfurl (string): url of PDF
+    
+    OUTPUT:
+    - abstract (string): abstract of PDF
+    
+    """
+    # get bytes stream of web pdf
+    r = requests.get(pdfurl, stream=True)
+    f = io.BytesIO(r.content)
+    # set up pdfminer
+    rsrcmgr = PDFResourceManager()
+    retstr = io.StringIO()
+    codec = 'utf-8'
+    laparams = LAParams()
+    device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
     # extract abstract
-    abstract = []
+    content = []
+    for page in PDFPage.get_pages(f, caching=True, check_extractable=True):
+        interpreter.process_page(page)
+        text = retstr.getvalue()
+        content.append(text)
+        if "abstract" in text.lower():
+            break
+    # close apps
+    device.close()
+    retstr.close()
+    # concatenate all text together
+    whole_text = " ".join(t for t in content)
+    # split text based on double line breaks
+    text = whole_text.split("\n\n")
     cnt = 0
-    text = content.split("\n")
-    while cnt < len(text):
-        if "abstract" in text[cnt].lower():
-            if "abstract" in text[cnt].lower() and len(text[cnt].split()) < 8:
-                cnt += 1
-            if "introduction" not in content.lower():
-                while True:
-                    if "*" in text[cnt] and len(text[cnt].split()) < 10:
-                        cnt += 1
-                    if "introduction" in text[cnt].lower():
-                        break
-                    elif len(text[cnt].split()) > 10:
-                        if "introduction" in text[cnt][:20].lower() or "i ntroduction" in text[cnt][:20].lower():
-                            break
-                        abstract.append(text[cnt])
-                        cnt +=1
-                    elif len(text[cnt].split()) == 1:
-                        if "introduction" in text[cnt].lower():
-                            break
-                        elif abstract[-1][-1] not in string.punctuation:
-                            if text[cnt][-1] in string.punctuation:
-                                abstract.append(text[cnt])
-                            cnt += 1
-                        else:
-                            try:
-                                int(text[cnt])
-                            except:
-                                break
-                        break
-                    else:
-                        break
+    abstract_string = ""
+    keywords_string = ""
+    # if "abstract" header in text, use this block to extract abstract and keywords
+    if "abstract" in whole_text.lower():
+        while cnt < len(text)-1:
+            if "introduction" in text[cnt].lower():
                 break
-            else:
-                while True:
-                    if "introduction" in text[cnt].lower():
-                        break
-                    abstract.append(text[cnt])
+            if "abstract" in text[cnt].lower():
+                if len(text[cnt].split()) < 2:
                     cnt += 1
+                abstract_string += text[cnt]
+                cnt += 1
+                if "keywords" in whole_text.lower() or "key-words" in whole_text.lower() or "keyword" in whole_text.lower() or "key word" in whole_text.lower():
+                    while True:
+                        if "keywords" in text[cnt].lower() or "key-words" in text[cnt].lower() or "keyword" in text[cnt].lower() or "key word" in text[cnt].lower():
+                            if len(text[cnt].split()) < 2:
+                                cnt += 1
+                            keywords_string += text[cnt]
+                            if text[cnt].strip()[-1] in (",", ";") and text[cnt+1].lower() not in ("i", "i.", "1", "introduction"):
+                                keywords_string += text[cnt+1]
+                            break
+                        else:
+                            cnt += 1
+                    break
                 break
-        else:
             cnt += 1
-    if not abstract:
+    # if "abstract" header does not exist, use this block to extract abstract and keywords
+    if not abstract_string:
         stop = 0
+        # find break point to stop at introduction
         while True:
-            #if "introduction" in text[stop].lower() and len(text[stop].split()) < 5:
             if "introduction" in text[stop].lower():
                 break
             else:
                 stop += 1
         cnt = 0
+        # iterate through each line up to introduction
         while cnt < stop:
-    #         if text[cnt] == " " or len(text[cnt]) < 2:
-    #             if len(text[cnt+1].split()) < 10:
-    #                 cnt += 1
-    #             else:
-    #                 abstract.append(text[cnt+1])
-    #                 if text[cnt+1][-1] == "-" or text[cnt+1][:-1] == "-":
-    #                     while True:
-    #                         if text[cnt+2][0].islower():
-    #                             abstract.append(text[cnt+2])
-    #                             break
-    #                         else:
-    #                             cnt += 1
-    #         cnt += 1
-            abstract.append(text[cnt])
+            # if keywords, put this in keywords variable
+            if "keywords" in text[cnt].lower() or "key-words" in text[cnt].lower() or "keyword" in text[cnt].lower() or "key word" in text[cnt].lower():
+                if len(text[cnt].split()) < 2:
+                    cnt += 1
+                keywords_string += text[cnt]
+            # if a number or a short piece of redundant text
+            elif len(text[cnt].split()) < 2:
+                pass
+            # if ocr has picked up annoying numebrs along side with many "\n"
+            elif text[cnt].count("\n") >= 3:
+                dummy = text[cnt].split("\n")
+                dummy_cnt = 0
+                for d in dummy:
+                    if len(d)>1:
+                        dummy_cnt += 1
+                if dummy_cnt > 2:
+                    abstract_string += text[cnt]+" " 
+            else:
+                abstract_string += text[cnt]+" "
             cnt += 1
+    # block to clean up keywords if it has appended extra text to the start
+    keywords_string_2 = ""
+    if "\n" in keywords_string:
+        keywords_dummy = keywords_string.split("\n")
+        if "keywords" in keywords_dummy[0].lower() or "key-words" in keywords_dummy[0].lower() or "keyword" in keywords_dummy[0].lower() or "key word" in keywords_dummy[0].lower():
+            pass
+        else:
+            cnt = 0
+            while cnt < len(keywords_dummy):
+                if "keywords" in keywords_dummy[cnt].lower() or "key-words" in keywords_dummy[cnt].lower() or "keyword" in keywords_dummy[cnt].lower() or "key word" in keywords_dummy[cnt].lower():
+                    if len(keywords_dummy[cnt].split()) < 2:
+                        cnt += 1
+                    keywords_string_2 += keywords_dummy[cnt]
+                cnt += 1
+            keywords_string = keywords_string_2
     # format abstract to present to user
-    abstract_string = ""
-    for a in abstract:
-        a = re.sub("-\n", "", a)
-        a = re.sub("\n", " ", a)
-        if a[-1] not in string.punctuation:
-            abstract_string += a+" "
-        elif a[-1] == "-" or a[-1] == "-":
-            abstract_string += a[:-1]
-        elif a[-1] in string.punctuation:
-            abstract_string += a+" "
+    abstract = ""
+    abstract = re.sub("-\n", "", abstract_string)
+    abstract = re.sub("\n", " ", abstract)
     # remove word 'abstract' and date at start
-    if "abstract" in abstract_string[:8].lower():
-        abstract_string = abstract_string[8:]
-    dummy1 = abstract_string.split(". ")
-    dummy2 = abstract_string.split()
+    if "abstract" in abstract[:8].lower():
+        abstract = abstract[8:]
+    dummy1 = abstract.split(". ")
+    dummy2 = abstract.split()
     if "abstract" in dummy1[0].lower():
         cnt = 0
         while True:
-            if dummy2[cnt].lower().strip() != "abstract":
+            if "abstract" not in dummy2[cnt].lower().strip():
                 cnt += 1
             else:
                 cnt += 1
                 break
-        abstract_string = " ".join(word for word in dummy2[cnt:])
-    if abstract_string[:1] in string.punctuation or abstract_string[:1] == "—":
-        abstract_string = abstract_string[1:]
-    abstract_string = abstract_string.strip()
-    abstract_string = re.sub("  ", " ", abstract_string)
+        abstract = " ".join(word for word in dummy2[cnt:])
+    if abstract[:1] in string.punctuation or abstract[:1] == "—":
+        abstract = abstract[1:]
+    abstract = abstract.strip()
+    abstract = re.sub("  ", " ", abstract)
     # clean up and return abstract
-    os.remove(url_name)
-    return abstract_string
+    return abstract
