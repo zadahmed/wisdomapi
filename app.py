@@ -3,11 +3,10 @@ import wptools
 import arxiv
 from flask import Flask , request , jsonify
 import os
-import abstractapi
+import wisdomaiengine
 from urllib.parse import unquote
 
 
-# Init App
 app = Flask(__name__)
 dir = os.path.abspath(os.path.dirname(__file__)) #  Directory
 
@@ -19,9 +18,14 @@ def home():
 
 @app.route('/wisdom/<path:pdfurl>',methods=['GET'])
 def wisdom(pdfurl):
-    abstract = abstractapi.abstractextracter(pdfurl)
-    abstractjson = jsonify(wisdomabstract = abstract)
-    return abstractjson
+    text = wisdomaiengine.pdfdocumentextracter(pdfurl)
+    summary = wisdomaiengine.summarisepdfdocument(text)
+    topics = wisdomaiengine.topicsindocument(text)
+    print(text)
+    print(summary)
+    print(topics)
+    summaryjson = jsonify(wisdomsummary = summary , wisdomtopics = topics)
+    return summaryjson
 
 @app.route('/search/<string:search_me>/<string:search_topic>/<int:relevance>/<int:summary_points>',methods = ['GET'])
 def search(search_me,search_topic , relevance,summary_points):
@@ -42,17 +46,22 @@ def search(search_me,search_topic , relevance,summary_points):
             iterative=False,
             max_chunk_results=10)
             papers = []
+            wordpapers = []
 
             for paper in result:
                 title = paper['summary']
+                title = title.replace('\n', ' ')
                 value = paper['title_detail']['value']
                 pdf_url = paper['pdf_url']
                 print('\nSummary ' + title)
                 print('\nTitle ' + value)
                 print('\nPDF Url' + pdf_url)
                 papers.append([title,value,pdf_url])
+                wordpapers.append([title])
             # jsonobject = s.factualSummary(search_me, summary_points, f_what_summary)
-            jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers)
+            # wordcloud = wisdomaiengine.wordcloud(search_me,wordpapers)
+            print(wordpapers)
+            jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers )
             return jsonob
         else:
             print("- Search topic error...")
