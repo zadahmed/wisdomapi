@@ -21,6 +21,9 @@ def wisdom(pdfurl):
     text = wisdomaiengine.pdfdocumentextracter(pdfurl)
     summary = wisdomaiengine.summarisepdfdocument(text)
     topics = wisdomaiengine.topicsindocument(text)
+    print(text)
+    print(summary)
+    print(topics)
     summaryjson = jsonify(wisdomsummary = summary , wisdomtopics = topics)
     return summaryjson
 
