@@ -390,7 +390,7 @@ def summarisepdfdocument(text):
     parser = PlaintextParser.from_string(' '.join(str(sentence) for sentence in summary), Tokenizer("english"))
     summarizer = TextRankSummarizer()
     doc_summary = summarizer(parser.document, key_points)
-    doc_summary = [str(sentence) for sentence in doc_summary]
+    doc_summary = " ".join(str(sentence) for sentence in doc_summary)
     return doc_summary
 
 
@@ -445,7 +445,7 @@ def topicsindocument(text):
     if final_topics[0][0] == "":
         final_topics = None
     else:
-        final_topics = [' + '.join(word for word in topic) for topic in final_topics]
+        final_topics = [' '.join(word for word in topic) for topic in final_topics]
     return final_topics
 
 
@@ -490,7 +490,7 @@ def wordcloud(search_term, corpus):
                 if thresh>0:
                     counter1+=1
                 else:
-                    important_words.append([word, value[0]])
+                    important_words.append(word)
                     counter1+=1
                     counter2+=1
             if important_words[0] == "":
