@@ -43,20 +43,22 @@ def search(search_me,search_topic , relevance,summary_points):
             iterative=False,
             max_chunk_results=10)
             papers = []
+            wordpapers = []
 
             for paper in result:
                 title = paper['summary']
+                title = title.replace('\n', ' ')
                 value = paper['title_detail']['value']
                 pdf_url = paper['pdf_url']
                 print('\nSummary ' + title)
                 print('\nTitle ' + value)
                 print('\nPDF Url' + pdf_url)
                 papers.append([title,value,pdf_url])
+                wordpapers.append([title])
             # jsonobject = s.factualSummary(search_me, summary_points, f_what_summary)
-            #wordcloud = wisdomaiengine.wordcloud(search_me,papers)
-            print(papers)
-            #print(wordcloud)
-            jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers )
+            wordcloud = wisdomaiengine.wordcloud(search_me,wordpapers)
+            print(wordcloud)
+            jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers , wordcloud = wordcloud )
             return jsonob
         else:
             print("- Search topic error...")
