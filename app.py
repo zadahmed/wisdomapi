@@ -53,8 +53,9 @@ def search(search_me,search_topic , relevance,summary_points):
                 print('\nPDF Url' + pdf_url)
                 papers.append([title,value,pdf_url])
             # jsonobject = s.factualSummary(search_me, summary_points, f_what_summary)
-            wordcloud = wisdomaiengine.wordcloud(search_me,papers)
-            print(wordcloud)
+            #wordcloud = wisdomaiengine.wordcloud(search_me,papers)
+            print(papers)
+            #print(wordcloud)
             jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers )
             return jsonob
         else:
