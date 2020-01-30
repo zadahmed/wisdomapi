@@ -347,6 +347,10 @@ def pdfdocumentextracter(pdfurl):
         cnt += 1
     # remove citations
     clean5 = " ".join(c for c in clean4)
+    clean5 = re.sub("cid:", "", clean5)
+    clean5 = re.sub("cid", "", clean5)
+    clean5 = re.sub("\(\d\)", "", clean5)
+    clean5 = re.sub("\(\d\d\)", "", clean5)
     clean5 = re.sub("^\[\d\]", "", clean5)
     clean5 = re.sub("^\[\d\d\]", "", clean5)
     clean5 = re.sub("^\[\d\d\]", "", clean5)
