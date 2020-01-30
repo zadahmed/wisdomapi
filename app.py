@@ -56,9 +56,9 @@ def search(search_me,search_topic , relevance,summary_points):
                 papers.append([title,value,pdf_url])
                 wordpapers.append([title])
             # jsonobject = s.factualSummary(search_me, summary_points, f_what_summary)
-            wordcloud = wisdomaiengine.wordcloud(search_me,wordpapers)
-            print(wordcloud)
-            jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers , wordcloud = wordcloud )
+            # wordcloud = wisdomaiengine.wordcloud(search_me,wordpapers)
+            print(wordpapers)
+            jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers )
             return jsonob
         else:
             print("- Search topic error...")
