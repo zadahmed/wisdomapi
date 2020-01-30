@@ -13,8 +13,11 @@ from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.text_rank import TextRankSummarizer
 from nltk.corpus import stopwords 
 from nltk.stem.wordnet import WordNetLemmatizer
+from nltk import sent_tokenize
 import gensim
 from gensim import corpora
+import pandas as pd
+import numpy as np
 
 
 # global variables and functions
@@ -35,6 +38,35 @@ def clean(doc):
     punc_free = ''.join(ch for ch in stop_free if ch not in exclude)
     normalized = " ".join(lemma.lemmatize(word) for word in punc_free.split())
     return normalized
+
+def frequency_processor(corpus):
+    all_text = ' '.join(i for i in corpus)
+    formatted_all_text = all_text.lower()
+    formatted_all_text = re.sub(r'[^\w\s]',' ',formatted_all_text)
+    formatted_all_text = " ".join(x for x in formatted_all_text.split() if x not in stop)
+    all_text_sent = all_text
+    # If there is no data
+    if not formatted_all_text or not all_text:
+        frequency = None
+        return frequency
+    # Otherwise
+    sentence_list = sent_tokenize(all_text_sent)
+    split_words = [f for f in formatted_all_text.split(" ") if len(f) > 2]
+    frequency = pd.value_counts(split_words).reset_index()
+    frequency.columns = ["words", "frequency"]
+    frequency = frequency[frequency["words"] != "-"]
+    frequency = frequency[frequency["words"] != "_"]
+    maximum_frequency = max(frequency["frequency"].values)
+    frequency["weighted_frequency"] = frequency["frequency"]/maximum_frequency
+    for i, word in enumerate(frequency["words"]):
+        frequency.loc[i, 'idf'] = np.log(len(sentence_list)/len([x for x in sentence_list if word in x.lower()]))
+    for i, word in enumerate(frequency["words"]):
+        try:
+            frequency.loc[i, 'lemmatized word'] = lemma.lemmatize(word)
+        except:
+            frequency.loc[i, 'lemmatized word'] = " "
+    frequency['tf_idf'] = frequency['frequency'] * frequency['idf']
+    return frequency
 
 
 # APIs
@@ -411,5 +443,60 @@ def topicsindocument(text):
     else:
         final_topics = [' + '.join(word for word in topic) for topic in final_topics]
     return final_topics
+
+
+def wordcloud(search_term, corpus):
+    """
+    Word cloud for summary of all research documents returned by ArXiv API
+    ------------------
+    This function creates a word cloud using the short summary of all the research
+    documents returned from the ArXiv API.
+    
+    INPUT:
+    - search_term (string): search term entered.
+    - corpus (list): list of strings containing all the short summaries of the documents
+                     returned by ArXiv API.   
+    
+    OUTPUT:
+    - words (list): list containing top 10 words across documents and their weighting by tf_idf.
+    
+    """
+    if corpus:
+        # frequency processing
+        frequency = frequency_processor(corpus)
+        important_words = []
+        if frequency is not None:
+            # create dataframe of top N
+            top_N = pd.DataFrame(frequency.groupby("lemmatized word")["tf_idf"].sum())
+            top_N = top_N.sort_values(by=["tf_idf"], ascending=False)
+            split = search_term.split()
+            counter1=0
+            counter2=1
+            # remove words that are within search term
+            num_words = 10
+            while counter2<(num_words+1):
+                word = top_N.index[counter1]
+                value = top_N.values[counter1]
+                thresh=0
+                for i in split:
+                    if i in word:
+                        thresh+=1
+                    else:
+                        pass
+                if thresh>0:
+                    counter1+=1
+                else:
+                    important_words.append([word, value[0]])
+                    counter1+=1
+                    counter2+=1
+            if important_words[0] == "":
+                important_words = None
+            return important_words
+        else:
+            return None
+    else:
+        return None
+    
+    
 
 
