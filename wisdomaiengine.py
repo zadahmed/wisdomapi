@@ -150,17 +150,17 @@ def abstractextracter(pdfurl):
     return abstract
 
 
-def summarisepdfdocument(pdfurl):
+def pdfdocumentextracter(pdfurl):
     """
-    Summarise PDF research document
+    Extract all text from PDF research document
     ------------------
-    This function summarises the 5 key points from a PDF research document
+    This function extracts and cleans all text from a PDF document
     
     INPUT:
     - pdfurl (string): url of PDF
     
     OUTPUT:
-    - doc_summary (list): summary containing top 5 points from PDF document. Points are ranked by important, 1st = most important.
+    - text (string): all text from PDF
     
     """
     # get bytes stream of web pdf
@@ -295,10 +295,28 @@ def summarisepdfdocument(pdfurl):
     clean5 = re.sub("-\n", "", clean5)
     clean5 = re.sub("\n", " ", clean5)
     clean5 = re.sub("  ", " ", clean5)
+    # return text
+    text = clean5
+    return text
+
+
+def summarisepdfdocument(text):
+    """
+    Summarise PDF research document
+    ------------------
+    This function summarises the 5 key points from a PDF research document
+    
+    INPUT:
+    - text (string): all extracted text from PDF research document
+    
+    OUTPUT:
+    - doc_summary (list): summary containing top 5 points from PDF document. Points are ranked by important, 1st = most important.
+    
+    """
     # Summarisation of top 5 key points
     key_points = 5
     summary = []
-    blob = TextBlob(clean5)
+    blob = TextBlob(text)
     sentences = [str(sentence) for sentence in blob.sentences]
     for sentence in sentences:
         if sentence.find(":", 0, 1) != -1 and sentence.find("-", 1, 3) != -1:
