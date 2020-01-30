@@ -18,6 +18,8 @@ import gensim
 from gensim import corpora
 import pandas as pd
 import numpy as np
+from easy_ocr import ocr_image
+import cv2
 
 
 # global variables and functions
@@ -67,6 +69,37 @@ def frequency_processor(corpus):
             frequency.loc[i, 'lemmatized word'] = " "
     frequency['tf_idf'] = frequency['frequency'] * frequency['idf']
     return frequency
+
+# Convolution kernels for OCR
+def get_grayscale(image):
+    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+def remove_noise(image):
+    return cv2.medianBlur(image,5)
+ 
+def thresholding(image):
+    return cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+
+def dilate(image):
+    kernel = np.ones((5,5),np.uint8)
+    return cv2.dilate(image, kernel, iterations = 1)
+    
+def erode(image):
+    kernel = np.ones((5,5),np.uint8)
+    return cv2.erode(image, kernel, iterations = 1)
+
+def deskew(image):
+    coords = np.column_stack(np.where(image > 0))
+    angle = cv2.minAreaRect(coords)[-1]
+    if angle < -45:
+        angle = -(90 + angle)
+    else:
+        angle = -angle
+    (h, w) = image.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    rotated = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    return rotated
 
 
 # APIs
@@ -501,6 +534,37 @@ def wordcloud(search_term, corpus):
     else:
         return None
     
+
+def bringyourowndocument(filename):
+    """
+    Extract text from your own document.
+    ------------------
+    Take a picture of your own document and extract text.
     
-
-
+    INPUT:
+    - filename (string): name of jpg file.  
+    
+    OUTPUT:
+    - text (string): all text extracted from document.
+    
+    """
+    # read image file
+    img = cv2.imread(filename)
+    # Adding custom options
+    custom_config = r'--oem 3 --psm 6'
+    # process image to create binary mask
+    gray = get_grayscale(img)
+    no_noise = remove_noise(gray)
+    eroded = erode(no_noise)
+    dilated = dilate(eroded)
+    deskewed = deskew(dilated)
+    thresh = thresholding(deskewed)
+    # save binary mask as png
+    name = filename.split(".")[0]+".png"
+    cv2.imwrite(name, thresh);
+    # perform OCR on png image to extract text
+    text = ocr_image(name, service='youdao')
+    text = " ".join(i for i in text)
+    text = re.sub("- ", "", text)
+    return text
+    
