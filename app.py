@@ -3,7 +3,7 @@ import wptools
 import arxiv
 from flask import Flask , request , jsonify
 import os
-import abstractapi
+import wisdomaiengine
 from urllib.parse import unquote
 
 
@@ -18,9 +18,11 @@ def home():
 
 @app.route('/wisdom/<path:pdfurl>',methods=['GET'])
 def wisdom(pdfurl):
-    abstract = abstractapi.abstractextracter(pdfurl)
-    abstractjson = jsonify(wisdomabstract = abstract)
-    return abstractjson
+    text = wisdomaiengine.pdfdocumentextracter(pdfurl)
+    summary = wisdomaiengine.summarisepdfdocument(text)
+    topics = wisdomaiengine.topicsindocument(text)
+    summaryjson = jsonify(wisdomsummary = summary , wisdomtopics = topics)
+    return summaryjson
 
 @app.route('/search/<string:search_me>/<string:search_topic>/<int:relevance>/<int:summary_points>',methods = ['GET'])
 def search(search_me,search_topic , relevance,summary_points):
@@ -51,7 +53,8 @@ def search(search_me,search_topic , relevance,summary_points):
                 print('\nPDF Url' + pdf_url)
                 papers.append([title,value,pdf_url])
             # jsonobject = s.factualSummary(search_me, summary_points, f_what_summary)
-            jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers)
+            wordcloud = wisdomaiengine.wordcloud(search_me,papers)
+            jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers , wordcloud = wordcloud)
             return jsonob
         else:
             print("- Search topic error...")
