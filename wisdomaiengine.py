@@ -20,6 +20,8 @@ import pandas as pd
 import numpy as np
 from easy_ocr import ocr_image
 import cv2
+import pytesseract
+import os
 
 
 # global variables and functions
@@ -563,8 +565,10 @@ def bringyourowndocument(filename):
     name = filename.split(".")[0]+".png"
     cv2.imwrite(name, thresh);
     # perform OCR on png image to extract text
-    text = ocr_image(name, service='youdao')
-    text = " ".join(i for i in text)
-    text = re.sub("- ", "", text)
+    text = pytesseract.image_to_string(name)
+    #text = ocr_image(name, service='youdao')
+    #text = " ".join(i for i in text)
+    #text = re.sub("- ", "", text)
+    text = re.sub("\n", " ", text)
+    os.remove(name)
     return text
-    
