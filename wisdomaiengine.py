@@ -21,6 +21,7 @@ import numpy as np
 from easy_ocr import ocr_image
 import cv2
 import pytesseract
+from pytesseract import Output
 import os
 
 
@@ -587,14 +588,29 @@ def bringyourowndocument(filename):
     dilated = dilate(eroded)
     deskewed = deskew(dilated)
     thresh = thresholding(deskewed)
-    # save binary mask as png
-    name = filename.split(".")[0]+".png"
-    cv2.imwrite(name, thresh);
-    # perform OCR on png image to extract text
-    text = pytesseract.image_to_string(name)
+    # get bounding box of text for crop
+    words = pytesseract.image_to_data(thresh, output_type=Output.DICT)
+    word_boxes = len(words['level'])
+    left = thresh.shape[1]
+    right = 0
+    bottom = thresh.shape[0]
+    top = 0
+    for i in range(word_boxes):
+        (x, y, w, h) = (words['left'][i], words['top'][i], words['width'][i], words['height'][i])
+        if x < left:
+            left = x
+        if x+w > right:
+            right = x+w
+        if y < bottom:
+            bottom = y
+        if y+h > top:
+            top = y+h
+    # crop image
+    crop_img = thresh[bottom:top, left:right]
+    # perform OCR on thresholded image to extract text
+    text = pytesseract.image_to_string(crop_img)
     #text = ocr_image(name, service='youdao')
     #text = " ".join(i for i in text)
-    #text = re.sub("- ", "", text)
+    text = re.sub("- ", "", text)
     text = re.sub("\n", " ", text)
-    os.remove(name)
     return text
