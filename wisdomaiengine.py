@@ -28,6 +28,7 @@ import os
 stop = set(stopwords.words("english"))
 exclude = set(string.punctuation) 
 lemma = WordNetLemmatizer()
+escapes = "ΔΩπϴλθ°îĵk̂ûαβγδεζηθικλμνξοπρςστυφχψωΓΔΘΛΞΠΣΦΨΩϴ≤="
 
 extras = ["et", "al", "le", "eg"]
 for extra in extras:
@@ -382,6 +383,8 @@ def pdfdocumentextracter(pdfurl):
         cnt += 1
     # remove citations
     clean5 = " ".join(c for c in clean4)
+    clean5 = re.sub("\(cid:\d\d\)", "", clean5)
+    clean5 = re.sub("\(cid:\d\)", "", clean5)
     clean5 = re.sub("cid:", "", clean5)
     clean5 = re.sub("cid", "", clean5)
     clean5 = re.sub("\(\d\)", "", clean5)
@@ -392,8 +395,31 @@ def pdfdocumentextracter(pdfurl):
     clean5 = re.sub("-\n", "", clean5)
     clean5 = re.sub("\n", " ", clean5)
     clean5 = re.sub("  ", " ", clean5)
+    # remove math and Figure text
+    blob = TextBlob(clean5)
+    sentences = [str(sentence) for sentence in blob.sentences]
+    # remove sentences with math
+    no_math = []
+    for sentence in sentences:
+        cnt = 0
+        for symbol in escapes:
+            if symbol in sentence:
+                cnt += 1
+        if cnt == 0:
+            no_math.append(sentence)
+    # remove sentences with "Figure X:" or "Fig X:""
+    no_figs = []
+    for sentence in no_math:
+        if re.search("Figure \d:", sentence):
+            pass
+        elif re.search("Fig. \d:", sentence):
+            pass
+        elif re.search("Fig \d:", sentence):
+            pass
+        else:
+            no_figs.append(sentence)
+    text = " ".join(n for n in no_figs)
     # return text
-    text = clean5
     return text
 
 
@@ -425,7 +451,7 @@ def summarisepdfdocument(text):
     parser = PlaintextParser.from_string(' '.join(str(sentence) for sentence in summary), Tokenizer("english"))
     summarizer = TextRankSummarizer()
     doc_summary = summarizer(parser.document, key_points)
-    doc_summary = " ".join(str(sentence) for sentence in doc_summary)
+    doc_summary = [str(sentence) for sentence in doc_summary]
     return doc_summary
 
 
