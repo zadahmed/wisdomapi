@@ -424,13 +424,15 @@ def pdfdocumentextracter(pdfurl):
     return text
 
 
-def summarisepdfdocument(text):
+def summarisepdfdocument(key_points=5, complexity=5, text):
     """
     Summarise PDF research document
     ------------------
     This function summarises the 5 key points from a PDF research document
     
     INPUT:
+    - key_points (int): number of key points to return as summary
+    - complexity (int): length of sentences to return in summary
     - text (string): all extracted text from PDF research document
     
     OUTPUT:
@@ -438,7 +440,7 @@ def summarisepdfdocument(text):
     
     """
     # Summarisation of top 5 key points
-    key_points = 5
+    sentence_length = complexity*30
     summary = []
     blob = TextBlob(text)
     sentences = [str(sentence) for sentence in blob.sentences]
@@ -447,7 +449,7 @@ def summarisepdfdocument(text):
             pass
         else:
             if len(sentence)>2:
-                if len(sentence.split()) < 150:
+                if len(sentence.split()) < sentence_length:
                     summary.append(sentence)
     parser = PlaintextParser.from_string(' '.join(str(sentence) for sentence in summary), Tokenizer("english"))
     summarizer = TextRankSummarizer()
