@@ -424,7 +424,7 @@ def pdfdocumentextracter(pdfurl):
     return text
 
 
-def summarisepdfdocument(key_points=5, complexity=5, text):
+def summarisepdfdocument(text, key_points=5, complexity=5):
     """
     Summarise PDF research document
     ------------------
@@ -455,6 +455,23 @@ def summarisepdfdocument(key_points=5, complexity=5, text):
     summarizer = TextRankSummarizer()
     doc_summary = summarizer(parser.document, key_points)
     doc_summary = [str(sentence) for sentence in doc_summary]
+    summary = []
+    for sent in doc_summary:
+        if "abstract" in sent.lower():
+            if "abstract" in sent.lower()[:15]:
+                sentence = re.sub("abstract", "", sent)
+                sentence = re.sub("Abstract", "", sentence)
+                sentence = re.sub("ABSTRACT", "", sentence)
+                sentence = sentence.strip()
+                if sentence[0] in string.punctuation or sentence[0] == "—":
+                    sentence = sentence[1:]
+                    sentence = sentence.strip()
+                summary.append(sentence)
+            else:
+                summary.append(sent)
+        else:
+            summary.append(sent)
+    doc_summary = summary
     return doc_summary
 
 
