@@ -444,6 +444,17 @@ def summarisepdfdocument(text, key_points=5, complexity=5):
     summary = []
     blob = TextBlob(text)
     sentences = [str(sentence) for sentence in blob.sentences]
+    summary_dummy = []
+    for sent in sentences:
+        if "•" in sent and ":" in sent:
+            sentence = re.sub("•", "", sent)
+            summary_dummy.append(sentence)
+        elif "•" in sent[:3]:
+            sentence = re.sub("•", ".", sent)
+            summary_dummy.append(sentence)
+        else:
+            summary_dummy.append(sent)
+    sentences = summary_dummy
     for sentence in sentences:
         if sentence.find(":", 0, 1) != -1 and sentence.find("-", 1, 3) != -1:
             pass
@@ -466,11 +477,11 @@ def summarisepdfdocument(text, key_points=5, complexity=5):
                 if sentence[0] in string.punctuation or sentence[0] == "—":
                     sentence = sentence[1:]
                     sentence = sentence.strip()
-                summary.append(sentence)
+                summary.append("• "+sentence)
             else:
-                summary.append(sent)
+                summary.append("• "+sent)
         else:
-            summary.append(sent)
+            summary.append("• "+sent)
     doc_summary = summary
     return doc_summary
 
