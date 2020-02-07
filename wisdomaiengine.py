@@ -23,6 +23,7 @@ import cv2
 import pytesseract
 from pytesseract import Output
 import os
+import scholarly
 
 
 # global variables and functions
@@ -431,9 +432,9 @@ def summarisepdfdocument(text, key_points=5, complexity=5):
     This function summarises the 5 key points from a PDF research document
     
     INPUT:
-    - key_points (int): number of key points to return as summary
-    - complexity (int): length of sentences to return in summary
     - text (string): all extracted text from PDF research document
+    - key_points (int), optional: number of key points to return as summary
+    - complexity (int), optional: length of sentences to return in summary
     
     OUTPUT:
     - doc_summary (list): summary containing top 5 points from PDF document. Points are ranked by important, 1st = most important.
@@ -644,3 +645,63 @@ def bringyourowndocument(filename):
     text = re.sub("- ", "", text)
     text = re.sub("\n", " ", text)
     return text
+
+
+def getgooglescholar(search_term, quantity=10):
+    """
+    Get search page results for docuements on Google Scholar
+    ------------------
+    Return top N results from Google Scholar based on search term
+    
+    INPUT:
+    - search_term (string): topic being searched.
+    - quantity (int), optional: number of documents to return
+    
+    OUTPUT:
+    - titles (list): titles of papers
+    - e_docs (list): links to e-documents
+    - urls (list): links to document
+    - abstracts (list): condensed abstracts of documents
+    
+    """
+    # create generator containing results
+    search_query = scholarly.search_pubs_query(search_term)
+    # loop for 'quantity' and write results into lists
+    titles = []
+    e_docs = []
+    urls = []
+    abstracts = []
+    cnt = 1
+    for i in search_query:
+        if cnt > quantity:
+            break
+        else:
+            result = next(search_query)
+            #result = next(search_query).fill()
+            # titles
+            try:
+                result.bib['title']
+                titles.append(result.bib['title'])
+            except:
+                titles.append("")
+            # e documents
+            try:
+                result.bib['eprint']
+                e_docs.append(result.bib['eprint'])
+            except:
+                e_docs.append("")
+            # urls
+            try:
+                result.bib['url']
+                urls.append(result.bib['url'])
+            except:
+                urls.append("")
+            # abstracts
+            try:
+                result.bib['abstract']
+                abstracts.append(result.bib['abstract'])
+            except:
+                abstracts.append("")
+            cnt += 1
+    return titles, e_docs, urls, abstracts
+
