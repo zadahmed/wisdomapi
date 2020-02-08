@@ -6,7 +6,9 @@ import os
 import wisdomaiengine
 from urllib.parse import unquote
 import pymongo
+from pymongo import Binary
 import sys
+from datetime import datetime
 
 app = Flask(__name__)
 dir = os.path.abspath(os.path.dirname(__file__)) #  Directory
@@ -36,39 +38,50 @@ try:
 except:
     print("Unable to connect to collections")
     sys.exit(1)
+
     
-# routes
+# home
 @app.route('/',methods = ['GET'])
 def home():
     return jsonify({'msg':'Hello World'})
 
+# abstract
 @app.route('/wisdom/abstract/<path:pdfurl>',methods=['GET'])
 def wisdomabstract(pdfurl ):
     print(pdfurl)
-    text = wisdomaiengine.pdfdocumentextracter(pdfurl)
-    abstract = wisdomaiengine.abstractextracter(pdfurl)
-    topics = wisdomaiengine.wordcloud( text)
-    if topics is None:
-        topics = ['No Topics Found']
-    print(abstract)
-    print(topics)
-    # write data top arxiv collection
-    data = {"url": pdfurl, "text": text, "abstract": abstract, "topics": topics}
-    x = arxiv.insert_one(data)
+    results = arxiv.findOne({"url": pdfurl})
+    if results:
+        abstract = results.abstract
+        topics = result.topics
+    else:
+        text = wisdomaiengine.pdfdocumentextracter(pdfurl)
+        abstract = wisdomaiengine.abstractextracter(pdfurl)
+        topics = wisdomaiengine.wordcloud( text)
+        if topics is None:
+            topics = ['No Topics Found']
+        print(abstract)
+        print(topics)
+        # write data top arxiv collection
+        data = {"url": pdfurl, "text": text, "abstract": abstract, "topics": topics, "last_updated": datetime.utcnow()}
+        x = arxiv.insert_one(data)
     summaryjson = jsonify(wisdomtopics = topics , wisdomabstract = abstract)
     return summaryjson
 
-
+# summary
 @app.route('/wisdom/summary/<path:pdfurl>',methods=['GET'])
 def wisdomsummary(pdfurl ):
     print(pdfurl)
-    text = wisdomaiengine.pdfdocumentextracter(pdfurl)
-    summary = wisdomaiengine.summarisepdfdocument(text)
-    print(summary)
-    summaryjson = jsonify(wisdomsummary = summary )
-    # write data to arxiv collection
-    data = {"url": pdfurl, "text": text, "summary": summary}
-    x = arxiv.insert_one(data)
+    results = arxiv.findOne({"url": pdfurl})
+    if results:
+        summary = results.summary
+    else:    
+        text = wisdomaiengine.pdfdocumentextracter(pdfurl)
+        summary = wisdomaiengine.summarisepdfdocument(text)
+        print(summary)
+        summaryjson = jsonify(wisdomsummary = summary )
+        # write data to arxiv collection
+        data = {"url": pdfurl, "text": text, "summary": summary, "last_updated": datetime.utcnow()}
+        x = arxiv.insert_one(data)
     return summaryjson
 
 
@@ -80,27 +93,24 @@ def wisdomsummary(pdfurl ):
 #     return summaryjson
 
 
-@app.route('/search/<string:search_me>/<string:search_topic>/<int:relevance>/<int:summary_points>',methods = ['GET'$
+@app.route('/search/<string:search_me>/<string:search_topic>/<int:relevance>/<int:summary_points>',methods = ['GET'])
 def search(search_me,search_topic , relevance,summary_points):
 # Run
     try:
         if search_topic=="Factual":
             page = wptools.page(search_me.lower())
-            # write data to search_terms collection
-            data = {"value": search_me}
-            x = search_terms.insert_one(data)
             r = page.get()
             f_what_summary = r.data['extext']
 
             result = arxiv.query(query=search_me,
-            id_list=[],
-            max_results=10,
-            start = 0,
-            sort_by="relevance",
-            sort_order="descending",
-            prune=False,
-            iterative=False,
-            max_chunk_results=10)
+                                 id_list=[],
+                                 max_results=10,
+                                 start = 0,
+                                 sort_by="relevance",
+                                 sort_order="descending",
+                                 prune=False,
+                                 iterative=False,
+                                 max_chunk_results=10)
             papers = []
             wordpapers = []
             
@@ -119,10 +129,20 @@ def search(search_me,search_topic , relevance,summary_points):
             wordcloud = wisdomaiengine.wordcloud(wordpapers)
             print(wordcloud)
             print(wordpapers)
-            # write data to searches collection
-            data = {"search_id": search_me}
-            x = searches.insert_one(data)
             jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers ,wordcloud = wordcloud )
+            
+            # check if search_term has been run before
+            results = search_terms.findOne({"value": search_me.lower()})
+            if results:
+                id = results.inserted_id
+            else:
+                # write data to search_terms collection
+                data = {"value": search_me.lower()}
+                id = search_terms.insert_one(data)
+            # write data to searches collection
+            data = {"search_id": id}
+            x = searches.insert_one(data)
+            
             return jsonob
         else:
             print("- Search topic error...")
@@ -143,7 +163,24 @@ def search(search_me,search_topic , relevance,summary_points):
         for file in clean_up:
             os.remove(file)
         # driver.close()
-
+                                                                                            
+                                                                                                              
+# bring your own document
+@app.route('/wisdom/byod/<string:img_location>', methods=['GET'])
+def byod(img_location):
+    # save img from local device to Wisdom db
+    binary_img = Binary(img_location)
+    data = {"document_name": "name", "binary_image": binary_img, "datetime": datetime.utcnow()}
+    x = byod.insert_one(data)
+    # get image from db
+    img_id = x.inserted_id
+    image = byod.findOne({"_id": img_id})
+    # run through engine
+    text = wisdomaiengine.bringyourowndocument(image)
+    summary = wisdomaiengine.summarisepdfdocument(text)
+    topics = wisdomaiengine.wordcloud(text)
+    return text, summary, topics
+                                                                                                
 # run server
 if __name__ == '__main__':
     app.run(host='0.0.0.0',threaded=True, port=5000)
