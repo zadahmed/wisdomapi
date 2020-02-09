@@ -619,32 +619,109 @@ def bringyourowndocument(filename):
     dilated = dilate(eroded)
     deskewed = deskew(dilated)
     thresh = thresholding(deskewed)
-    # get bounding box of text for crop
-    words = pytesseract.image_to_data(thresh, output_type=Output.DICT)
-    word_boxes = len(words['level'])
-    left = thresh.shape[1]
-    right = 0
-    bottom = thresh.shape[0]
-    top = 0
-    for i in range(word_boxes):
-        (x, y, w, h) = (words['left'][i], words['top'][i], words['width'][i], words['height'][i])
-        if x < left:
-            left = x
-        if x+w > right:
-            right = x+w
-        if y < bottom:
-            bottom = y
-        if y+h > top:
-            top = y+h
-    # crop image
-    crop_img = thresh[bottom:top, left:right]
-    # perform OCR on thresholded image to extract text
-    text = pytesseract.image_to_string(crop_img)
-    #text = ocr_image(name, service='youdao')
-    #text = " ".join(i for i in text)
-    text = re.sub("- ", "", text)
-    text = re.sub("\n", " ", text)
-    return text
+    # switch colours of binary mask
+    thresh[thresh == 255] = 128
+    thresh[thresh == 0] = 255
+    thresh[thresh == 128] = 0
+    # get dimensions of original image
+    height = thresh.shape[0]
+    width = thresh.shape[1]
+    middle_column = round(width/2)
+    middle_row = round(height/2)
+    # calculate left boundary
+    left = middle_column
+    gap = 0
+    cnt = 0
+    tracker = 0
+    exit = False
+    while cnt < left:
+        for i in range(middle_row, height):
+            if tracker > 1000:
+                exit = True
+                break
+            elif thresh[i][left] == 0:
+                gap += 1
+            else:
+                tracker = gap
+                gap = 0
+                break
+        if exit == True:
+            break
+        else:
+            left -= 1
+    # calculate right boundary
+    right = middle_column
+    gap = 0
+    tracker = 0
+    exit = False
+    while right < width:
+        for i in range(middle_row, height):
+            if tracker > 1000:
+                exit = True
+                break
+            elif thresh[i][right] == 0:
+                gap += 1
+            else:
+                tracker = gap
+                gap = 0
+                break
+        if exit == True:
+            break
+        else:
+            right += 1
+    # slice left and right side off
+    if left > 50:
+        left -= 50
+    if right < width-50:
+        right += 50
+    crop_img = thresh[:height, left:right]
+    # calculate top boundary
+    end = crop_img.shape[0]
+    cnt = 0
+    top = end-1
+    values = []
+    while cnt < top:
+        if sum(crop_img[cnt]) == 0:
+            values.append(cnt)
+        else:
+            values.append(0)    
+        cnt += 1
+    idx = [i for i,x in enumerate(values) if x != 0]
+    try:
+        top = min(idx)
+    except:
+        top = 0
+    # slice off the top
+    crop_img = thresh[top:, left:right]
+    # calculate the bottom boundary
+    end = crop_img.shape[0]
+    cnt = 0
+    bottom = end-1
+    values = []
+    while cnt < bottom:
+        if sum(crop_img[cnt]) == 0:
+            values.append(cnt)
+        else:
+            values.append(0)    
+        cnt += 1
+    bottom = max(values)
+    # final slice of the bottom
+    crop_img = crop_img[:bottom, :]
+    # switch colours back
+    crop_img[crop_img == 255] = 128
+    crop_img[crop_img == 0] = 255
+    crop_img[crop_img == 128] = 0
+    try:
+        # perform OCR on thresholded image to extract text
+        text = pytesseract.image_to_string(crop_img)
+        #text = ocr_image(name, service='youdao')
+        #text = " ".join(i for i in text)
+        text = re.sub("-\n", "", text)
+        text = re.sub("\n", " ", text)
+        text = re.sub("- ", "", text)
+        return text
+    except:
+        return "Error with image"
 
 
 def getgooglescholar(search_term, quantity=10):
