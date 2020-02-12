@@ -47,7 +47,7 @@ def clean(doc):
     return normalized
 
 def frequency_processor(corpus):
-    all_text = ' '.join(i[0] for i in corpus)
+    all_text = corpus
     formatted_all_text = all_text.lower()
     formatted_all_text = re.sub(r'[^\w\s]',' ',formatted_all_text)
     formatted_all_text = " ".join(x for x in formatted_all_text.split() if x not in stop)
@@ -122,6 +122,20 @@ def abstractextracter(pdfurl):
     
     """
     try:
+        if "https" in pdfurl:
+            url = pdfurl.split("https:")
+            if "//" != url[:2]:
+                url = "https:/"+url[1]
+                pdfurl = url
+            else:
+                pass
+        elif "http" in pdfurl:
+            url = pdfurl.split("http:")
+            if "//" != url[:2]:
+                url = "http:/"+url[1]
+                pdfurl = url
+            else:
+                pass
         # get bytes stream of web pdf
         r = requests.get(pdfurl, stream=True)
         f = io.BytesIO(r.content)
@@ -270,6 +284,20 @@ def pdfdocumentextracter(pdfurl):
     """
     try:
         # get bytes stream of web pdf
+        if "https" in pdfurl:
+            url = pdfurl.split("https:")
+            if "//" != url[:2]:
+                url = "https:/"+url[1]
+                pdfurl = url
+            else:
+                pass
+        elif "http" in pdfurl:
+            url = pdfurl.split("http:")
+            if "//" != url[:2]:
+                url = "http:/"+url[1]
+                pdfurl = url
+            else:
+                pass 
         r = requests.get(pdfurl, stream=True)
         f = io.BytesIO(r.content)
         # set up pdfminer
@@ -289,7 +317,7 @@ def pdfdocumentextracter(pdfurl):
         # close apps
         device.close()
         retstr.close()
-    except:
+    except: 
         return "Unable to extract all text... try another document"
     try:
         # remove noise and numbers at side of document
@@ -451,7 +479,7 @@ def pdfdocumentextracter(pdfurl):
                 pass
             else:
                 no_figs.append(sentence)
-        text = " ".join(n for n in no_figs)
+        text = " ".join(str(n) for n in no_figs)
     except:
         print("Error when removing citations and math: ", pdfurl)
     # return text
@@ -594,7 +622,7 @@ def topicsindocument(text):
         return "Unable to extract topics, no text..."
 
 
-def wordcloud(search_term, corpus):
+def wordcloud(corpus):
     """
     Word cloud for summary of all research documents returned by ArXiv API
     ------------------
@@ -619,28 +647,34 @@ def wordcloud(search_term, corpus):
                 # create dataframe of top N
                 top_N = pd.DataFrame(frequency.groupby("lemmatized word")["tf_idf"].sum())
                 top_N = top_N.sort_values(by=["tf_idf"], ascending=False)
-                split = search_term.lower().split()
+                #split = search_term.lower().split()
                 counter1=0
                 counter2=1
-                # remove words that are within search term
                 num_words = 10
-                while counter2<(num_words+1):
+                while counter1<(num_words):
                     word = top_N.index[counter1]
                     value = top_N.values[counter1]
-                    thresh=0
-                    for i in split:
-                        if i in word:
-                            thresh+=1
-                        else:
-                            pass
-                    if thresh>0:
-                        counter1+=1
-                    else:
-                        important_words.append(word)
-                        counter1+=1
-                        counter2+=1
-                if important_words[0] == "":
-                    important_words = None
+                    important_words.append(word)
+                    counter1 += 1
+                # remove words that are within search term
+                # num_words = 10
+                # while counter2<(num_words+1):
+                #     word = top_N.index[counter1]
+                #     value = top_N.values[counter1]
+                #     thresh=0
+                #     for i in split:
+                #         if i in word:
+                #             thresh+=1
+                #         else:
+                #             pass
+                #     if thresh>0:
+                #         counter1+=1
+                #     else:
+                #         important_words.append(word)
+                #         counter1+=1
+                #         counter2+=1
+                # if important_words[0] == "":
+                #     important_words = None
                 return important_words
             except:
                 return "Error with word cloud..."
