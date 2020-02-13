@@ -122,6 +122,20 @@ def abstractextracter(pdfurl):
     
     """
     try:
+        if "https" in pdfurl:
+            url = pdfurl.split("https:")
+            if "//" != url[:2]:
+                url = "https:/"+url[1]
+                pdfurl = url
+            else:
+                pass
+        elif "http" in pdfurl:
+            url = pdfurl.split("http:")
+            if "//" != url[:2]:
+                url = "http:/"+url[1]
+                pdfurl = url
+            else:
+                pass
         # get bytes stream of web pdf
         r = requests.get(pdfurl, stream=True)
         f = io.BytesIO(r.content)
@@ -270,6 +284,20 @@ def pdfdocumentextracter(pdfurl):
     """
     try:
         # get bytes stream of web pdf
+        if "https" in pdfurl:
+            url = pdfurl.split("https:")
+            if "//" != url[:2]:
+                url = "https:/"+url[1]
+                pdfurl = url
+            else:
+                pass
+        elif "http" in pdfurl:
+            url = pdfurl.split("http:")
+            if "//" != url[:2]:
+                url = "http:/"+url[1]
+                pdfurl = url
+            else:
+                pass 
         r = requests.get(pdfurl, stream=True)
         f = io.BytesIO(r.content)
         # set up pdfminer
@@ -395,7 +423,7 @@ def pdfdocumentextracter(pdfurl):
                 clean3.append(clean2[cnt])
             cnt += 1
     except:
-        print("Error when removing figrue captions: ", pdfurl)
+        print("Error when removing figure captions: ", pdfurl)
     try:
         # remove table data
         clean4 = []
