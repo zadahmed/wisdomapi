@@ -5,7 +5,7 @@
 import os
 import wptools
 import arxiv
-from flask import Flask , request , jsonify
+from flask import Flask, request, jsonify
 import os
 import wisdomaiengine
 from urllib.parse import unquote
@@ -55,8 +55,8 @@ def home():
     return jsonify({'msg':'Hello World'})
 
 # wisdom engine
-@app.route('/wisdom/<path:pdfurl>', methods=['GET'])
-def wisdom(pdfurl):
+@app.route('/wisdom/<string:search_me>/<path:pdfurl>', methods=['GET'])
+def wisdom(search_me, pdfurl):
     # check if pdfurl has been found before
     pdf = db_arxiv.find_one({"url": pdfurl})
     if pdf:
@@ -72,7 +72,9 @@ def wisdom(pdfurl):
         if topics is None:
             topics = ['No Topics Found']
         # write data top arxiv collection
-        data = {"url": pdfurl, "text": text, "abstract": abstract, "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
+        search_term = db_search_terms.find_one({"value": search_me.lower()})
+        search_id = search_term.get("_id")
+        data = {"search_id": search_id, "url": pdfurl, "text": text, "abstract": abstract, "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
         x = db_arxiv.insert(data)
     summaryjson = jsonify(wisdomtopics=topics, wisdomabstract=abstract, wisdomsummary=summary)
     return summaryjson
@@ -80,31 +82,51 @@ def wisdom(pdfurl):
 # search
 @app.route('/search/<string:search_me>', methods=['GET'])
 def search(search_me):
-    page = wptools.page(search_me.lower())
-    r = page.get()
-    f_what_summary = r.data['extext']
-    result = arxiv.query(query=search_me,
-                            id_list=[],
-                            max_results=10,
-                            start = 0,
-                            sort_by="relevance",
-                            sort_order="descending",
-                            prune=False,
-                            iterative=False,
-                            max_chunk_results=10)
-    papers = []
-    wordpapers = []
-    for paper in result:
-        title = paper['summary']
-        title = title.replace('\n', ' ')
-        value = paper['title_detail']['value']
-        value = value.replace('\n', ' ')
-        pdf_url = paper['pdf_url']
-        papers.append([title,value,pdf_url])
-        wordpapers.append(title)
-    wordpapers = " ".join(w for w in wordpapers)
-    wordcloud = wisdomaiengine.wordcloud(wordpapers)
-    jsonob = jsonify(search= search_me , summary= f_what_summary , papers= papers ,wordcloud = wordcloud )
+    # get wikipedia
+    try:
+        # see if it is saved in db
+        search_term = db_search_terms.find_one({"value": search_me.lower()})
+        if search_term:
+            search_id = search_term.get("_id")
+            wiki = db_wikipedia.find_one({"search_id": search_id})
+            if wiki:
+                what_summary = wiki.get('wiki_summary')
+        # if not, use wiki API
+        else:
+            page = wptools.page(search_me.lower())
+            r = page.get()
+            what_summary = r.data['extext']
+    except:
+        what_summary = "Couldn't find Wikipedia page!..."
+    # get arxiv results
+    try:
+        result = arxiv.query(query=search_me.lower(),
+                             id_list=[],
+                             max_results=10,
+                             start = 0,
+                             sort_by="relevance",
+                             sort_order="descending",
+                             prune=False,
+                             iterative=False,
+                             max_chunk_results=10)
+    except:
+        result = None
+    # get wordcloud
+    if result:
+        papers = []
+        wordpapers = []
+        for paper in result:
+            title = paper['summary']
+            title = title.replace('\n', ' ')
+            value = paper['title_detail']['value']
+            value = value.replace('\n', ' ')
+            pdf_url = paper['pdf_url']
+            papers.append([title,value,pdf_url])
+            wordpapers.append(title)
+        wordpapers = " ".join(w for w in wordpapers)
+        wordcloud = wisdomaiengine.wordcloud(wordpapers)
+    else:
+        wordcloud = "No topics found!..."
     # check if search_term has been run before
     results = db_search_terms.find_one({"value": search_me.lower()})
     if results:
@@ -115,11 +137,20 @@ def search(search_me):
         search_id = db_search_terms.insert(data)
     # write data to searches collection
     data = {"search_id": search_id, "datetime": datetime.utcnow()}
-    x = db_searches.insert(data) 
+    x = db_searches.insert(data)
+    # save data to wikipedia collection
+    wiki = db_wikipedia.find_one({"search_id": search_id})
+    if wiki:
+        pass
+    else:
+        data = {"search_id": search_id, "wiki_summary": what_summary, "datetime": datetime.utcnow()}
+        x = db_wikipedia.insert(data)
+    # return json object
+    jsonob = jsonify(search=search_me, summary=what_summary, papers=papers, wordcloud=wordcloud)
     return jsonob
-                                                                                                                                                                                                   
+
 # bring your own document
-@app.route('/wisdom/byod/<string:img_location>', methods=['GET'])
+@app.route('/byod/<path:img_location>', methods=['GET'])
 def byod(img_location):
     # save img from local device to Wisdom db
     #binary_img = Binary(img_location)

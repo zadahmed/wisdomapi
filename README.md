@@ -50,7 +50,7 @@ Edit the mongodb.service file to include authorisation optin:
 Reload the service and log in:
 
     $ sudo systemctl daemon-reload
-    $ sudo service mongod restart
+    $ sudo service mongodb restart
     $ mongo -u admin -p admin123 --authenticationDatabase admin
 
 Some basic commands for MongoDB:
