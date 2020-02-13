@@ -63,3 +63,9 @@ Some basic commands for MongoDB:
     $ db.<COLLECTION NAME>.remove({})
     $ db.dropDatabase()
     $ db.<COLLECTION NAME>.find(query)
+
+### Committing changes to GitHub
+
+Use the `deployment` branch to run code on the server. When changes are made, push the changes using the following command:
+
+    $ git push wisdomapi deployment
