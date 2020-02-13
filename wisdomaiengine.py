@@ -335,8 +335,13 @@ def pdfdocumentextracter(pdfurl):
                     break
                 if "\n" in text[cnt]:
                     break
+            else:
+                break
             cnt += 1
-        text = text[:cnt]
+        if cnt == 0:
+            text = text
+        else:
+            text = text[:cnt]
         # remove equation number references
         clean1 = []
         for t in text:
@@ -413,23 +418,59 @@ def pdfdocumentextracter(pdfurl):
             cnt += 1
     except:
         print("Error when removing table data: ", pdfurl)
+    # remove superscripts
+    try:
+        clean5 = []
+        for c in clean4:
+            dummy = re.sub("  ", " ", c)
+            # remove .X-Y superscripts
+            if re.search(".\d-\d", dummy):
+                text = re.sub(".\d-\d", "", dummy)
+            else:
+                text = dummy
+            # remove X,Y mid sentence superscripts
+            if re.search("\w\d,\d \w", text):
+                text = re.sub("\d,\d", "", text)
+            else:
+                text = text
+            # remove X,Y end of sentence superscripts
+            if re.search("\w.\d,\d \w", text):
+                text = re.sub("\d,\d", "", text)
+            else:
+                text = text
+            # remove superscripts at end of sentence
+            if re.search(".\d [A-Z]", text):
+                text = re.sub(".\d ", ". ", text)
+            elif re.search(".\d\d [A-Z]", text):
+                text = re.sub(".\d\d ", ". ", text)
+            else:
+                text = text
+            # remove mid sentence superscripts
+            if re.search("\w\d \w", text):
+                text = re.sub("\d ", "", text)
+            else:
+                text = text
+            clean5.append(text)
+    except:
+        print("Error removing superscripts")
+        clean5 = clean4
     try:
         # remove citations
-        clean5 = " ".join(c for c in clean4)
-        clean5 = re.sub("\(cid:\d\d\)", "", clean5)
-        clean5 = re.sub("\(cid:\d\)", "", clean5)
-        clean5 = re.sub("cid:", "", clean5)
-        clean5 = re.sub("cid", "", clean5)
-        clean5 = re.sub("\(\d\)", "", clean5)
-        clean5 = re.sub("\(\d\d\)", "", clean5)
-        clean5 = re.sub("^\[\d\]", "", clean5)
-        clean5 = re.sub("^\[\d\d\]", "", clean5)
-        clean5 = re.sub("^\[\d\d\]", "", clean5)
-        clean5 = re.sub("-\n", "", clean5)
-        clean5 = re.sub("\n", " ", clean5)
-        clean5 = re.sub("  ", " ", clean5)
+        clean6 = " ".join(c for c in clean5)
+        clean6 = re.sub("\(cid:\d\d\)", "", clean6)
+        clean6 = re.sub("\(cid:\d\)", "", clean6)
+        clean6 = re.sub("cid:", "", clean6)
+        clean6 = re.sub("cid", "", clean6)
+        clean6 = re.sub("\(\d\)", "", clean6)
+        clean6 = re.sub("\(\d\d\)", "", clean6)
+        clean6 = re.sub("^\[\d\]", "", clean6)
+        clean6 = re.sub("^\[\d\d\]", "", clean6)
+        clean6 = re.sub("^\[\d\d\]", "", clean6)
+        clean6 = re.sub("-\n", "", clean6)
+        clean6 = re.sub("\n", " ", clean6)
+        clean6 = re.sub("  ", " ", clean6)
         # remove math and Figure text
-        blob = TextBlob(clean5)
+        blob = TextBlob(clean6)
         sentences = [str(sentence) for sentence in blob.sentences]
         # remove sentences with math
         no_math = []
@@ -454,6 +495,16 @@ def pdfdocumentextracter(pdfurl):
         text = " ".join(n for n in no_figs)
     except:
         print("Error when removing citations and math: ", pdfurl)
+    # removing final equations that are leftover as numbers
+    final_sentences = []
+    blob = TextBlob(text)
+    sentences = [str(sentence) for sentence in blob.sentences]
+    for sent in sentences:
+        if re.search("\(\d\d\d\d\)", sent):
+            pass
+        else:
+            final_sentences.append(sent)
+    text = " ".join(f for f in final_sentences)
     # return text
     return text
 
