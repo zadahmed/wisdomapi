@@ -150,20 +150,23 @@ def search(search_me):
     return jsonob
 
 # bring your own document
-@app.route('/byod/<path:img_location>', methods=['GET'])
+@app.route('/byod/<string:img_location>', methods=['GET', 'POST'])
 def byod(img_location):
-    # save img from local device to Wisdom db
-    #binary_img = Binary(img_location)
-    #data = {"document_name": "name", "binary_image": binary_img, "datetime": datetime.utcnow()}
-    #x = byod.insert_one(data)
-    # get image from db
-    #img_id = x.inserted_id
-    #image = byod.findOne({"_id": img_id})
-    # run through engine
-    text = wisdomaiengine.bringyourowndocument(image)
-    summary = wisdomaiengine.summarisepdfdocument(text)
-    topics = wisdomaiengine.wordcloud(text)
-    return text, summary, topics
+    if request.method == "GET":
+        # save img from local device to Wisdom db
+        #binary_img = Binary(img_location)
+        #data = {"document_name": "name", "binary_image": binary_img, "datetime": datetime.utcnow()}
+        #x = byod.insert_one(data)
+        # get image from db
+        #img_id = x.inserted_id
+        #image = byod.findOne({"_id": img_id})
+        # run through engine
+        text = wisdomaiengine.bringyourowndocument(image)
+        summary = wisdomaiengine.summarisepdfdocument(text)
+        topics = wisdomaiengine.wordcloud(text)
+        return text, summary, topics
+    else:
+        print("RECEIVED")
                                                                                                 
 # run server
 if __name__ == '__main__':
