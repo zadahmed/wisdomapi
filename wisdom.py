@@ -114,7 +114,7 @@ def search(search_me):
         data = {"value": search_me.lower()}
         search_id = db_search_terms.insert(data)
     # write data to searches collection
-    data = {"search_id": search_id}
+    data = {"search_id": search_id, "datetime": datetime.utcnow()}
     x = db_searches.insert(data) 
     return jsonob
                                                                                                                                                                                                    
