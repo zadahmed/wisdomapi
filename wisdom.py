@@ -65,7 +65,7 @@ def wisdom(search_me, pdfurl):
         summary = pdf.get('summary')
         topics = pdf.get('topics')
         # update in db if data is 7 days or older
-        last_updated = datetime.utcnow() - pdf.get("datetime")
+        last_updated = datetime.utcnow() - pdf.get("last_updated")
         last_updated_diff = last_updated.days
         if last_updated_diff > 7:
             search_term = db_search_terms.find_one({"value": search_me.lower()})
