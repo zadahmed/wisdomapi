@@ -30,7 +30,7 @@ import scholarly
 stop = set(stopwords.words("english"))
 exclude = set(string.punctuation) 
 lemma = WordNetLemmatizer()
-escapes = "ΔΩπϴλθ°îĵk̂ûαβγδεζηθικλμνξοπρςστυφχψωΓΔΘΛΞΠΣΦΨΩϴ≤="
+escapes = "ΔΩπϴλθ°îĵk̂ûαβγδεζηθικλμνξοπρςστυφχψωΓΔΘΛΞΠΣΦΨΩϴ≤=∂"
 
 extras = ["et", "al", "le", "eg"]
 for extra in extras:

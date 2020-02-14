@@ -64,6 +64,17 @@ def wisdom(search_me, pdfurl):
         abstract = pdf.get('abstract')
         summary = pdf.get('summary')
         topics = pdf.get('topics')
+        # update in db if data is 7 days or older
+        last_updated = datetime.utcnow() - pdf.get("datetime")
+        last_updated_diff = last_updated.days
+        if last_updated_diff > 7:
+            search_term = db_search_terms.find_one({"value": search_me.lower()})
+            search_id = search_term.get("_id")
+            data = {"search_id": search_id, "url": pdfurl, "text": text, "abstract": abstract,
+                    "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
+            db_arxiv.update({"url": pdfurl}, {"$set": data})
+        else:
+            pass
     else:
         text = wisdomaiengine.pdfdocumentextracter(pdfurl)
         abstract = wisdomaiengine.abstractextracter(pdfurl)
@@ -71,10 +82,11 @@ def wisdom(search_me, pdfurl):
         topics = wisdomaiengine.wordcloud(text)
         if topics is None:
             topics = ['No Topics Found']
-        # write data top arxiv collection
+        # write data to arxiv collection
         search_term = db_search_terms.find_one({"value": search_me.lower()})
         search_id = search_term.get("_id")
-        data = {"search_id": search_id, "url": pdfurl, "text": text, "abstract": abstract, "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
+        data = {"search_id": search_id, "url": pdfurl, "text": text, "abstract": abstract,
+                "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
         x = db_arxiv.insert(data)
     summaryjson = jsonify(wisdomtopics=topics, wisdomabstract=abstract, wisdomsummary=summary)
     return summaryjson
@@ -100,15 +112,10 @@ def search(search_me):
         what_summary = "Couldn't find Wikipedia page!..."
     # get arxiv results
     try:
-        result = arxiv.query(query=search_me.lower(),
-                             id_list=[],
-                             max_results=10,
-                             start = 0,
-                             sort_by="relevance",
-                             sort_order="descending",
-                             prune=False,
-                             iterative=False,
-                             max_chunk_results=10)
+        result = arxiv.query(query=search_me.lower(), id_list=[],
+                             max_results=10, start = 0, sort_by="relevance",
+                             sort_order="descending", prune=False,
+                             iterative=False, max_chunk_results=10)
     except:
         result = None
     # get wordcloud
@@ -141,12 +148,22 @@ def search(search_me):
     # save data to wikipedia collection
     wiki = db_wikipedia.find_one({"search_id": search_id})
     if wiki:
-        pass
+        # update in db if data is 7 days or older
+        last_updated = datetime.utcnow() - wiki.get("datetime")
+        last_updated_diff = last_updated.days
+        if last_updated_diff > 7:
+            data = {"search_id": search_id, "wiki_summary": what_summary,
+                    "datetime": datetime.utcnow()}
+            db_wikipedia.update({"search_id": search_id}, {"$set": data})
+        else:
+            pass
     else:
-        data = {"search_id": search_id, "wiki_summary": what_summary, "datetime": datetime.utcnow()}
+        data = {"search_id": search_id, "wiki_summary": what_summary,
+                "datetime": datetime.utcnow()}
         x = db_wikipedia.insert(data)
     # return json object
-    jsonob = jsonify(search=search_me, summary=what_summary, papers=papers, wordcloud=wordcloud)
+    jsonob = jsonify(search=search_me, summary=what_summary, papers=papers,
+                     wordcloud=wordcloud)
     return jsonob
 
 # bring your own document
@@ -155,7 +172,8 @@ def byod(img_location):
     if request.method == "GET":
         # save img from local device to Wisdom db
         #binary_img = Binary(img_location)
-        #data = {"document_name": "name", "binary_image": binary_img, "datetime": datetime.utcnow()}
+        #data = {"document_name": "name", "binary_image": binary_img,
+        #         "datetime": datetime.utcnow()}
         #x = byod.insert_one(data)
         # get image from db
         #img_id = x.inserted_id
