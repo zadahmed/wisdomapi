@@ -69,3 +69,9 @@ Some basic commands for MongoDB:
 Use the `deployment` branch to run code on the server. When changes are made, push the changes using the following command:
 
     $ git push wisdomapi deployment
+
+### Viewing logs
+
+    $ sudo journalctl -u wisdom --since "5 minutes ago"
+    $ cat /var/log/nginx/error.log
+

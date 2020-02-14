@@ -364,8 +364,9 @@ def pdfdocumentextracter(pdfurl):
                 if "\n" in text[cnt]:
                     break
             else:
-                break
-            cnt += 1
+                #break
+                cnt += 1
+            #cnt += 1
         if cnt == 0:
             text = text
         else:
@@ -413,6 +414,25 @@ def pdfdocumentextracter(pdfurl):
     except:
         print("Error when removing headers: ", pdfurl)
     try:
+        # replace \d.\d with \d~||~\d so blob.sentences doesn't get fooled
+        clean22 = []
+        for c in clean2:
+            if re.search("\d\.\d", c):
+                dummy = ""
+                splits = c.split()
+                for s in splits:
+                    if re.search("\d.\d", s):
+                        text = re.sub("\.", "~||~", s)
+                    else:
+                        text = s
+                    dummy += text+" "
+                clean22.append(dummy)
+            else:
+                clean22.append(c)
+        clean2 = clean22
+    except:
+        print("Error when removing headers: ", pdfurl)
+    try:
         # remove figure captions
         clean3 = []
         cnt = 0
@@ -429,7 +449,9 @@ def pdfdocumentextracter(pdfurl):
         clean4 = []
         cnt = 0
         while cnt < len(clean3)-1:
-            if clean3[cnt][-1] == ".":
+            if "~||~" in clean3[cnt]:
+                clean4.append(clean3[cnt])
+            elif clean3[cnt][-1] == ".":
                 if re.sub("\d", "", clean3[cnt+1]).strip()[0].islower():
                     pass
                 else:
@@ -452,8 +474,8 @@ def pdfdocumentextracter(pdfurl):
         for c in clean4:
             dummy = re.sub("  ", " ", c)
             # remove .X-Y superscripts
-            if re.search(".\d-\d", dummy):
-                text = re.sub(".\d-\d", "", dummy)
+            if re.search("\.\d-\d", dummy):
+                text = re.sub("\.\d-\d", "", dummy)
             else:
                 text = dummy
             # remove X,Y mid sentence superscripts
@@ -462,20 +484,28 @@ def pdfdocumentextracter(pdfurl):
             else:
                 text = text
             # remove X,Y end of sentence superscripts
-            if re.search("\w.\d,\d \w", text):
+            if re.search("\w\.\d,\d \w", text):
                 text = re.sub("\d,\d", "", text)
             else:
                 text = text
             # remove superscripts at end of sentence
-            if re.search(".\d [A-Z]", text):
-                text = re.sub(".\d ", ". ", text)
-            elif re.search(".\d\d [A-Z]", text):
-                text = re.sub(".\d\d ", ". ", text)
+            if re.search("\.\d [A-Z]", text):
+                text = re.sub("\.\d ", ". ", text)
+            elif re.search("\.\d\d [A-Z]", text):
+                text = re.sub("\.\d\d ", ". ", text)
             else:
                 text = text
             # remove mid sentence superscripts
             if re.search("\w\d \w", text):
-                text = re.sub("\d ", "", text)
+                dummy = ""
+                for t in text.split():
+                    if re.search("^\w\d", t):
+                        dummy += re.sub("\d", "", t)+" "
+                    elif "~||~" in t:
+                        dummy += t+" "
+                    else:
+                        dummy += t+" "
+                text = dummy
             else:
                 text = text
             clean5.append(text)
@@ -493,7 +523,12 @@ def pdfdocumentextracter(pdfurl):
         clean6 = re.sub("\(\d\d\)", "", clean6)
         clean6 = re.sub("^\[\d\]", "", clean6)
         clean6 = re.sub("^\[\d\d\]", "", clean6)
-        clean6 = re.sub("^\[\d\d\]", "", clean6)
+        clean6 = re.sub("^\[\d,\d\]", "", clean6)
+        clean6 = re.sub("\[\d\d\]", "", clean6)
+        clean6 = re.sub("\[\d,\d\]", "", clean6)
+        clean6 = re.sub(" \[,\].", ".", clean6)
+        clean6 = re.sub(" \[,\]", "", clean6)
+        clean6 = re.sub("\[,\]", "", clean6)
         clean6 = re.sub("-\n", "", clean6)
         clean6 = re.sub("\n", " ", clean6)
         clean6 = re.sub("  ", " ", clean6)
@@ -532,7 +567,44 @@ def pdfdocumentextracter(pdfurl):
             pass
         else:
             final_sentences.append(sent)
-    text = " ".join(f for f in final_sentences)
+    # replacing eq. and Fig. with Equation and Figure
+    final_sentences = [re.sub("Fig.", "Figure", f) for f in final_sentences]
+    final_sentences = [re.sub("Eq.", "Equation", f) for f in final_sentences]
+    final_sentences = [re.sub("Eqs.", "Equation", f) for f in final_sentences]
+    # removing sentences with figures - irrelevant to summarisation
+    end_sentences = []
+    for sent in final_sentences:
+        if re.search("Figure", sent):
+            pass
+        else:
+            end_sentences.append(sent)
+    # removing sentences with equation references - irrelevant to summarisation
+    end2_sentences = []
+    for sent in end_sentences:
+        if re.search("Equation", sent):
+            pass
+        else:
+            end2_sentences.append(sent)
+    # replacing \d~||~\d with . to restore float numbers
+    end3_sentences = []
+    for sent in end2_sentences:
+        #print(sent, "\n")
+        if "~||~" in sent:
+            end3_sentences.append(sent.replace("~||~", "."))
+        else:
+            end3_sentences.append(sent)
+    # if sentences starts with punctuation or has been split incorrectly mid sentence - remove
+    end3_sentences = [sent for sent in end3_sentences if sent[0] not in string.punctuation]
+    #end_sentences = [sent for sent in end2_sentences if sent[0].isupper()]
+    # replace " ." with "." at end of sentence
+    end4_sentences = []
+    for e in end3_sentences:
+        if e[-2:] == " .":
+            text = e[:-2]+"."
+        else:
+            text = e
+        end4_sentences.append(text)
+    text = " ".join(e for e in end4_sentences)
     # return text
     return text
 
