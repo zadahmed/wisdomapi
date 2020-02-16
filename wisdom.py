@@ -2,7 +2,7 @@
 # IMPORTS #
 ###########
 
-import os
+
 import wptools
 import arxiv
 from flask import Flask, request, jsonify
@@ -10,9 +10,11 @@ import os
 import wisdomaiengine
 from urllib.parse import unquote
 import pymongo
-#from pymongo import Binary
+from io import BytesIO
 import sys
 from datetime import datetime
+import base64
+from PIL import Image
 
 ##########################
 # INSTANTIATE FLASK & DB #
@@ -167,24 +169,18 @@ def search(search_me):
     return jsonob
 
 # bring your own document
-@app.route('/byod/<string:img_location>', methods=['GET', 'POST'])
-def byod(img_location):
+@app.route('/byod', methods=['GET' , 'POST'])
+def byod():
     if request.method == "GET":
-        # save img from local device to Wisdom db
-        #binary_img = Binary(img_location)
-        #data = {"document_name": "name", "binary_image": binary_img,
-        #         "datetime": datetime.utcnow()}
-        #x = byod.insert_one(data)
-        # get image from db
-        #img_id = x.inserted_id
-        #image = byod.findOne({"_id": img_id})
-        # run through engine
+        print('Hi')
+    if request.method == "POST":
+        data = request.form.get('image')
+        imgdata = base64.b64decode(data)
+        image = Image.open(BytesIO(imgdata))
+        print(image.format)
         text = wisdomaiengine.bringyourowndocument(image)
-        summary = wisdomaiengine.summarisepdfdocument(text)
-        topics = wisdomaiengine.wordcloud(text)
-        return text, summary, topics
-    else:
-        print("RECEIVED")
+        jsonob = jsonify(img = text)
+        return jsonob
                                                                                                 
 # run server
 if __name__ == '__main__':
