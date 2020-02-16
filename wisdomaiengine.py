@@ -25,6 +25,8 @@ from pytesseract import Output
 import os
 import scholarly
 
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+
 
 # global variables and functions
 stop = set(stopwords.words("english"))
@@ -932,17 +934,17 @@ def bringyourowndocument(img):
         crop_img[crop_img == 128] = 0
     except:
         return "Error finding vertical boundaries... try another one"
-    try:
+    # try:
         # perform OCR on thresholded image to extract text
-        text = pytesseract.image_to_string(crop_img)
-        #text = ocr_image(name, service='youdao')
-        #text = " ".join(i for i in text)
-        text = re.sub("-\n", "", text)
-        text = re.sub("\n", " ", text)
-        text = re.sub("- ", "", text)
-        return text
-    except:
-        return "Error with extracting text... try another one"
+    text = pytesseract.image_to_string(crop_img)
+    #text = ocr_image(name, service='youdao')
+    #text = " ".join(i for i in text)
+    text = re.sub("-\n", "", text)
+    text = re.sub("\n", " ", text)
+    text = re.sub("- ", "", text)
+    return text
+    # except:
+        # return "Error with extracting text... try another one"
 
 
 def getgooglescholar(search_term, quantity=10):

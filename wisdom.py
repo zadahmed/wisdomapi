@@ -16,6 +16,7 @@ from datetime import datetime
 import base64
 from PIL import Image
 import numpy as np
+import cv2
 
 ##########################
 # INSTANTIATE FLASK & DB #
@@ -176,16 +177,10 @@ def byod():
         print('Hi')
     if request.method == "POST":
         data = request.form.get('image')
-        with open(data, "rb") as f:
-            imgdata = f.read()
-        f.close()
-        jpg_as_np = np.frombuffer(imgdata, dtype=np.uint8)
-        img = cv2.imdecode(jpg_as_np, flags=1)
+        nparr = np.fromstring(base64.b64decode(data), np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         text = wisdomaiengine.bringyourowndocument(img)
-        #imgdata = base64.b64decode(data)
-        #image = Image.open(BytesIO(imgdata))
-        #print(image.format)
-        #text = wisdomaiengine.bringyourowndocument(image)
+        print(text)
         jsonob = jsonify(img=text)
         return jsonob
                                                                                                 

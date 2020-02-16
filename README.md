@@ -73,5 +73,5 @@ Use the `deployment` branch to run code on the server. When changes are made, pu
 ### Viewing logs
 
     $ sudo journalctl -u wisdom --since "5 minutes ago"
-    $ cat /var/log/nginx/error.log
+    $ sudo cat /var/log/nginx/error.log
 

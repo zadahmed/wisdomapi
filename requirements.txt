@@ -13,6 +13,7 @@ sumy==0.8.1
 textblob==0.15.3
 numpy==1.18.1
 opencv-python
+pillow
 pytesseract
 scholarly
 pymongo==2.8
