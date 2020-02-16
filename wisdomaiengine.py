@@ -807,7 +807,7 @@ def wordcloud(corpus):
         return "Unable to find topics..."
     
 
-def bringyourowndocument(filename):
+def bringyourowndocument(img):
     """
     Extract text from your own document.
     ------------------
@@ -822,7 +822,7 @@ def bringyourowndocument(filename):
     """
     try:
         # read image file
-        img = cv2.imread(filename)
+        #img = cv2.imread(filename)
         # Adding custom options
         custom_config = r'--oem 3 --psm 6'
         # process image to create binary mask
