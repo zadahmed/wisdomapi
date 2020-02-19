@@ -17,6 +17,7 @@ import base64
 from PIL import Image
 import numpy as np
 import cv2
+from dateutil import parser
 
 ##########################
 # INSTANTIATE FLASK & DB #
@@ -122,17 +123,37 @@ def search(search_me):
                              iterative=False, max_chunk_results=10)
     except:
         result = None
-    # get wordcloud
+    # get results and wordcloud
     if result:
         papers = []
         wordpapers = []
         for paper in result:
-            title = paper['summary']
-            title = title.replace('\n', ' ')
-            value = paper['title_detail']['value']
-            value = value.replace('\n', ' ')
+            # title
+            title = paper['title_detail']['value']
+            title = title.replace('\n', '')
+            # abstract summary
+            summary = paper['summary']
+            summary = summary.replace('\n', '')
+            # publish date
+            publish_date = str(paper["published"])
+            dt = parser.parse(publish_date)
+            date = str(dt.day) + "-" + str(dt.month) + "-" + str(dt.year)
+            # authors
+            authors_list = paper["authors"]
+            authors = ""
+            if len(authors_list) == 1:
+                authors += authors_list[0]
+            else:
+                for idx, author in enumerate(authors_list):
+                    if idx == 0:
+                        authors += author+","
+                    elif idx == len(authors_list)-1:
+                        authors += " "+author
+                    else:
+                        authors += " "+author+","
+            # url
             pdf_url = paper['pdf_url']
-            papers.append([title,value,pdf_url])
+            papers.append([title, summary, date, authors, pdf_url])
             wordpapers.append(title)
         wordpapers = " ".join(w for w in wordpapers)
         wordcloud = wisdomaiengine.wordcloud(wordpapers)
@@ -180,7 +201,6 @@ def byod():
         nparr = np.fromstring(base64.b64decode(data), np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         text = wisdomaiengine.bringyourowndocument(img)
-        print(text)
         jsonob = jsonify(img=text)
         return jsonob
                                                                                                 

@@ -936,7 +936,7 @@ def bringyourowndocument(img):
         return "Error finding vertical boundaries... try another one"
     # try:
         # perform OCR on thresholded image to extract text
-    text = pytesseract.image_to_string(crop_img)
+    text = pytesseract.image_to_string(thresh)
     #text = ocr_image(name, service='youdao')
     #text = " ".join(i for i in text)
     text = re.sub("-\n", "", text)
