@@ -107,14 +107,23 @@ def search(search_me):
             search_id = search_term.get("_id")
             wiki = db_wikipedia.find_one({"search_id": search_id})
             if wiki:
-                what_summary = wiki.get('wiki_summary')
+                wiki_def = wiki.get('wiki_summary')
+                wiki_key_points = wiki.get('wiki_key_points')
         # if not, use wiki API
         else:
             page = wptools.page(search_me.lower())
             r = page.get()
-            what_summary = r.data['extext']
+            wiki_def = r.data['extext']
+            aliases = r.data['aliases']
+            wiki_def = wiki_def.replace("( **", "(")
+            wiki_def = wiki_def.replace("** )", ")")
+            wiki_def = wiki_def.replace("**", "")
+            wiki_def = wiki_def.replace("_", "")
+        # summarise into 5 bullet points
+        wiki_key_points = wisdomaiengine.summarisepdfdocument(wiki_def)
     except:
-        what_summary = "Couldn't find Wikipedia page!..."
+        wiki_def = "Couldn't find definition!..."
+        wiki_key_points = ""
     # get arxiv results
     try:
         result = arxiv.query(query=search_me.lower(), id_list=[],
@@ -133,7 +142,7 @@ def search(search_me):
             title = title.replace('\n', '')
             # abstract summary
             summary = paper['summary']
-            summary = summary.replace('\n', '')
+            summary = summary.replace('\n', ' ')
             # publish date
             publish_date = str(paper["published"])
             dt = parser.parse(publish_date)
@@ -154,7 +163,7 @@ def search(search_me):
             # url
             pdf_url = paper['pdf_url']
             papers.append([title, summary, date, authors, pdf_url])
-            wordpapers.append(title)
+            wordpapers.append(summary)
         wordpapers = " ".join(w for w in wordpapers)
         wordcloud = wisdomaiengine.wordcloud(wordpapers)
     else:
@@ -177,18 +186,19 @@ def search(search_me):
         last_updated = datetime.utcnow() - wiki.get("datetime")
         last_updated_diff = last_updated.days
         if last_updated_diff > 7:
-            data = {"search_id": search_id, "wiki_summary": what_summary,
-                    "datetime": datetime.utcnow()}
+            data = {"search_id": search_id, "wiki_summary": wiki_def,
+                    "wiki_key_points": wiki_key_points, "datetime": datetime.utcnow()}
             db_wikipedia.update({"search_id": search_id}, {"$set": data})
         else:
             pass
     else:
-        data = {"search_id": search_id, "wiki_summary": what_summary,
-                "datetime": datetime.utcnow()}
+        data = {"search_id": search_id, "wiki_summary": wiki_def, 
+                "wiki_key_points": wiki_key_points, "datetime": datetime.utcnow()}
         x = db_wikipedia.insert(data)
     # return json object
-    jsonob = jsonify(search=search_me, summary=what_summary, papers=papers,
-                     wordcloud=wordcloud)
+    jsonob = jsonify(search=search_me, summary=wiki_def, 
+                    key_points=wiki_key_points, papers=papers,
+                    wordcloud=wordcloud)
     return jsonob
 
 # bring your own document
