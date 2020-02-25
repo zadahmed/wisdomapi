@@ -215,6 +215,39 @@ def byod():
         text = wisdomaiengine.bringyourowndocument(img)
         jsonob = jsonify(img=text)
         return jsonob
+
+@app.route('/definition/<string:word>')
+def definition(word):
+    url = "https://wordsapiv1.p.mashape.com/words/"+word
+    headers = {"x-rapidapi-host": "wordsapiv1.p.rapidapi.com", 
+               "x-rapidapi-key": "fd1f8ffa7bmsh11a27ed783e94dbp19198cjsn072eae335940"}
+    r = requests.get(pdfurl, headers=headers)
+    r = r.json()
+    try:
+        data = r["results"]
+        results = [data["definition"], data["synonyms"], data["inCategory"],
+                   data["hasCategories"], data["hasTypes"], data["derivation"]]
+        return results
+    except:
+        url = "https://en.wikipedia.org/w/api.php"
+        params = {
+            "action": "query",
+            "format": "json",
+            "list": "search",
+            "srsearch": word
+        }
+        r = reqests.get(url, params)
+        data = r.json()
+        definitions = []
+        if data['query']['search'][0]['title'] == word:
+            results = []
+            search = data['query']['search']
+            for s in search:
+                results.append([s["title"], s["snippet"]])
+            return results
+        else:
+            return "Oops... can't find definition!"
+
                                                                                                 
 # run server
 if __name__ == '__main__':
