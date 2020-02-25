@@ -63,6 +63,7 @@ def home():
 # wisdom engine
 @app.route('/wisdom/<string:search_me>/<path:pdfurl>', methods=['GET'])
 def wisdom(search_me, pdfurl):
+    search_me = search_me.strip()
     # check if pdfurl has been found before
     pdf = db_arxiv.find_one({"url": pdfurl})
     if pdf:
@@ -102,6 +103,7 @@ def wisdom(search_me, pdfurl):
 # search
 @app.route('/search/<string:search_me>', methods=['GET'])
 def search(search_me):
+    search_me = search_me.strip()
     # get wikipedia
     try:
         # see if it is saved in db
@@ -226,6 +228,7 @@ def byod():
 
 @app.route('/definition/<string:word>')
 def definition(word):
+    word = word.strip()
     results = wisdomaiengine.highlighter(word)
     jsonob = jsonify(results=results)
     return jsonob
