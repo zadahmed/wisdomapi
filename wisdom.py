@@ -66,7 +66,6 @@ def wisdom(search_me, pdfurl):
     pdf = db_arxiv.find_one({"url": pdfurl})
     if pdf:
         text = pdf.get('text')
-        abstract = pdf.get('abstract')
         summary = pdf.get('summary')
         topics = pdf.get('topics')
         # update in db if data is 7 days or older
@@ -75,25 +74,28 @@ def wisdom(search_me, pdfurl):
         if last_updated_diff > 7:
             search_term = db_search_terms.find_one({"value": search_me.lower()})
             search_id = search_term.get("_id")
-            data = {"search_id": search_id, "url": pdfurl, "text": text, "abstract": abstract,
+            data = {"search_id": search_id, "url": pdfurl, "text": text,
                     "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
             db_arxiv.update({"url": pdfurl}, {"$set": data})
         else:
             pass
     else:
         text = wisdomaiengine.pdfdocumentextracter(pdfurl)
-        abstract = wisdomaiengine.abstractextracter(pdfurl)
+        #print("TEXT done: ", datetime.utcnow())
         summary = wisdomaiengine.summarisepdfdocument(text)
+        #print("SUMMARY done: ", datetime.utcnow())
         topics = wisdomaiengine.wordcloud(text)
+        #print("TOPICS done: ", datetime.utcnow())
         if topics is None:
             topics = ['No Topics Found']
         # write data to arxiv collection
         search_term = db_search_terms.find_one({"value": search_me.lower()})
         search_id = search_term.get("_id")
-        data = {"search_id": search_id, "url": pdfurl, "text": text, "abstract": abstract,
+        data = {"search_id": search_id, "url": pdfurl, "text": text,
                 "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
         x = db_arxiv.insert(data)
-    summaryjson = jsonify(wisdomtopics=topics, wisdomabstract=abstract, wisdomsummary=summary)
+    summaryjson = jsonify(wisdomtopics=topics,
+                          wisdomsummary=summary)
     return summaryjson
 
 # search
