@@ -24,6 +24,8 @@ import pytesseract
 from pytesseract import Output
 import os
 import scholarly
+from bs4 import BeautifulSoup
+
 
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
@@ -1011,3 +1013,74 @@ def getgooglescholar(search_term, quantity=10):
     except:
         return "Unable to collect Google Scholar results..."
 
+def highlightdefinition(word):
+    """
+    Highlight a word and return the definition
+    ------------------
+    Return definition of a word when highlighting
+    
+    INPUT:
+    - word (string): word for definition search
+    
+    OUTPUT:
+    - results (dict): dictonary of definitions
+    
+    """
+    url = "https://wordsapiv1.p.mashape.com/words/"+word
+    headers = {"x-rapidapi-host": "wordsapiv1.p.rapidapi.com", 
+               "x-rapidapi-key": "fd1f8ffa7bmsh11a27ed783e94dbp19198cjsn072eae335940"}
+    r = requests.get(url, headers=headers)
+    r = r.json()
+    try:
+        results = {}
+        data = r["results"][0]
+        # definition
+        if "definition" in data:
+            results["definition"] = data["definition"]
+        else:
+            results["definition"] = ""
+        # synonyms
+        if "synonyms" in data:
+            results["synonyms"] = data["synonyms"]
+        else:
+            results["synonyms"] = ""
+        # in category
+        if "inCategory" in data:
+            results["inCategory"] = data["inCategory"]
+        else:
+            results["inCategory"] = ""
+        # has category
+        if "hasCategories" in data:
+            results["hasCategories"] = data["hasCategories"]
+        else:
+            results["hasCategories"] = ""
+        # has types
+        if "hasTypes" in data:
+            results["hasTypes"] = data["hasTypes"]
+        else:
+            results["hasTypes"] = ""
+        # derivation
+        if "derivation" in data:
+            results["derivation"] = data["derivation"]
+        else:
+            results["derivation"] = ""
+        return results
+    except:
+        url = "https://en.wikipedia.org/w/api.php"
+        params = {
+            "action": "query",
+            "format": "json",
+            "list": "search",
+            "srsearch": word
+        }
+        r = requests.get(url, params)
+        data = r.json()
+        definitions = []
+        if data['query']['search'][0]['title'].lower() == word:
+            results = {}
+            search = data['query']['search']
+            for s in search:                
+                results[s["title"]] = BeautifulSoup(s["snippet"], "lxml").text
+            return results
+        else:
+            return "Oops... can't find definition!"
