@@ -18,6 +18,7 @@ from PIL import Image
 import numpy as np
 import cv2
 from dateutil import parser
+import requests
 
 ##########################
 # INSTANTIATE FLASK & DB #
@@ -216,18 +217,49 @@ def byod():
         jsonob = jsonify(img=text)
         return jsonob
 
+
 @app.route('/definition/<string:word>')
 def definition(word):
     url = "https://wordsapiv1.p.mashape.com/words/"+word
     headers = {"x-rapidapi-host": "wordsapiv1.p.rapidapi.com", 
                "x-rapidapi-key": "fd1f8ffa7bmsh11a27ed783e94dbp19198cjsn072eae335940"}
-    r = requests.get(pdfurl, headers=headers)
+    r = requests.get(url, headers=headers)
     r = r.json()
     try:
-        data = r["results"]
-        results = [data["definition"], data["synonyms"], data["inCategory"],
-                   data["hasCategories"], data["hasTypes"], data["derivation"]]
-        return results
+        results = {}
+        data = r["results"][0]
+        # definition
+        if "definition" in data:
+            results["definition"] = data["definition"]
+        else:
+            results["definition"] = ""
+        # synonyms
+        if "synonyms" in data:
+            results["synonyms"] = data["synonyms"]
+        else:
+            results["synonyms"] = ""
+        # in category
+        if "inCategory" in data:
+            results["inCategory"] = data["inCategory"]
+        else:
+            results["inCategory"] = ""
+        # has category
+        if "hasCategories" in data:
+            results["hasCategories"] = data["hasCategories"]
+        else:
+            results["hasCategories"] = ""
+        # has types
+        if "hasTypes" in data:
+            results["hasTypes"] = data["hasTypes"]
+        else:
+            results["hasTypes"] = ""
+        # derivation
+        if "derivation" in data:
+            results["derivation"] = data["derivation"]
+        else:
+            results["derivation"] = ""
+        jsonob = jsonify(results=results)
+        return jsonob
     except:
         url = "https://en.wikipedia.org/w/api.php"
         params = {
@@ -236,19 +268,20 @@ def definition(word):
             "list": "search",
             "srsearch": word
         }
-        r = reqests.get(url, params)
+        r = requests.get(url, params)
         data = r.json()
         definitions = []
-        if data['query']['search'][0]['title'] == word:
+        if data['query']['search'][0]['title'].lower() == word:
             results = []
             search = data['query']['search']
             for s in search:
                 results.append([s["title"], s["snippet"]])
-            return results
+            jsonob = jsonify(results=results)
+            return jsonob
         else:
             return "Oops... can't find definition!"
 
-                                                                                                
+                                                                                       
 # run server
 if __name__ == '__main__':
     app.run(host='0.0.0.0',threaded=True, port=5000)
