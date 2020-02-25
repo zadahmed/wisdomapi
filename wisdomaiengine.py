@@ -1108,3 +1108,4 @@ def highlighter(word):
         else:
             results = "Oops... couldn't find a definition!"
         return results
+
