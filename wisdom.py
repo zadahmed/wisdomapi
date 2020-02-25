@@ -94,7 +94,7 @@ def wisdom(search_me, pdfurl):
         search_id = search_term.get("_id")
         data = {"search_id": search_id, "url": pdfurl, "text": text,
                 "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
-        x = db_arxiv.insert(data)
+        x = db_arxiv.insert(data, check_keys=False)
     summaryjson = jsonify(wisdomtopics=topics,
                           wisdomsummary=summary)
     return summaryjson
@@ -111,22 +111,23 @@ def search(search_me):
             wiki = db_wikipedia.find_one({"search_id": search_id})
             if wiki:
                 wiki_def = wiki.get('wiki_summary')
-                wiki_key_points = wiki.get('wiki_key_points')
-        # if not, use wiki API
+                #wiki_key_points = wiki.get('wiki_key_points')
+        # if not, use mediawiki API
         else:
-            page = wptools.page(search_me.lower())
-            r = page.get()
-            wiki_def = r.data['extext']
-            aliases = r.data['aliases']
-            wiki_def = wiki_def.replace("( **", "(")
-            wiki_def = wiki_def.replace("** )", ")")
-            wiki_def = wiki_def.replace("**", "")
-            wiki_def = wiki_def.replace("_", "")
+            # page = wptools.page(search_me.lower())
+            # r = page.get()
+            # wiki_def = r.data['extext']
+            # aliases = r.data['aliases']
+            # wiki_def = wiki_def.replace("( **", "(")
+            # wiki_def = wiki_def.replace("** )", ")")
+            # wiki_def = wiki_def.replace("**", "")
+            # wiki_def = wiki_def.replace("_", "")
+            wiki_def = wisdomaiengine.definition(search_me)
         # summarise into 5 bullet points
-        wiki_key_points = wisdomaiengine.summarisepdfdocument(wiki_def)
+        #wiki_key_points = wisdomaiengine.summarisepdfdocument(wiki_def["wikipedia"])
     except:
-        wiki_def = "Couldn't find definition!..."
-        wiki_key_points = ""
+        wiki_def = "Oops... couldn't find definition!"
+        #wiki_key_points = ""
     # get arxiv results
     try:
         result = arxiv.query(query=search_me.lower(), id_list=[],
@@ -178,29 +179,34 @@ def search(search_me):
     else:
         # write data to search_terms collection
         data = {"value": search_me.lower()}
-        search_id = db_search_terms.insert(data)
+        search_id = db_search_terms.insert(data, check_keys=False)
     # write data to searches collection
     data = {"search_id": search_id, "datetime": datetime.utcnow()}
-    x = db_searches.insert(data)
+    x = db_searches.insert(data, check_keys=False)
     # save data to wikipedia collection
     wiki = db_wikipedia.find_one({"search_id": search_id})
     if wiki:
         # update in db if data is 7 days or older
         last_updated = datetime.utcnow() - wiki.get("datetime")
         last_updated_diff = last_updated.days
-        if last_updated_diff > 7:
+        if last_updated_diff > 1:
             data = {"search_id": search_id, "wiki_summary": wiki_def,
-                    "wiki_key_points": wiki_key_points, "datetime": datetime.utcnow()}
+                    #"wiki_key_points": wiki_key_points, 
+                    "datetime": datetime.utcnow()}
             db_wikipedia.update({"search_id": search_id}, {"$set": data})
         else:
             pass
     else:
-        data = {"search_id": search_id, "wiki_summary": wiki_def, 
-                "wiki_key_points": wiki_key_points, "datetime": datetime.utcnow()}
-        x = db_wikipedia.insert(data)
+        data = {"search_id": search_id,
+                "wiki_summary": wiki_def, 
+                #"wiki_key_points": wiki_key_points, 
+                "datetime": datetime.utcnow()}
+        x = db_wikipedia.insert(data, check_keys=False)
     # return json object
-    jsonob = jsonify(search=search_me, summary=wiki_def, 
-                    key_points=wiki_key_points, papers=papers,
+    jsonob = jsonify(search=search_me,
+                    summary=wiki_def, 
+                    #key_points=wiki_key_points, 
+                    papers=papers,
                     wordcloud=wordcloud)
     return jsonob
 
@@ -220,7 +226,7 @@ def byod():
 
 @app.route('/definition/<string:word>')
 def definition(word):
-    results = wisdomaiengine.highlightdefinition(word)
+    results = wisdomaiengine.highlighter(word)
     jsonob = jsonify(results=results)
     return jsonob
 

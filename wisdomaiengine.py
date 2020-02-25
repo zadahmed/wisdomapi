@@ -25,6 +25,7 @@ from pytesseract import Output
 import os
 import scholarly
 from bs4 import BeautifulSoup
+from mediawikiapi import MediaWikiAPI
 
 
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
@@ -35,6 +36,7 @@ stop = set(stopwords.words("english"))
 exclude = set(string.punctuation) 
 lemma = WordNetLemmatizer()
 escapes = "ΔΩπϴλθ°îĵk̂ûαβγδεζηθικλμνξοπρςστυφχψωΓΔΘΛΞΠΣΦΨΩϴ≤=∂"
+mediawikiapi = MediaWikiAPI()
 
 extras = ["et", "al", "le", "eg"]
 for extra in extras:
@@ -1013,7 +1015,35 @@ def getgooglescholar(search_term, quantity=10):
     except:
         return "Unable to collect Google Scholar results..."
 
-def highlightdefinition(word):
+
+def definition(search_me):
+    """
+    Get factual definition of the Wisdom search term
+    ------------------
+    Get multiple definitions of the search term
+    
+    INPUT:
+    - search_me (string): search term
+    
+    OUTPUT:
+    - results (dict): nested dictionary of data sources and results
+    
+    """
+    # Wikipedia
+    search_terms = mediawikiapi.search(search_me.lower())
+    if search_terms:
+        results = {}
+        wiki_data = {}
+        for term in search_terms:
+            text = mediawikiapi.summary(term)
+            wiki_data[term] = text
+        results["wikipedia"] = wiki_data
+    else:
+        results = "Oops... couldn't find anything on Wikipedia!"
+    return results
+
+
+def highlighter(word):
     """
     Highlight a word and return the definition
     ------------------
@@ -1023,7 +1053,7 @@ def highlightdefinition(word):
     - word (string): word for definition search
     
     OUTPUT:
-    - results (dict): dictonary of definitions
+    - results (dict): dictionary of definitions
     
     """
     url = "https://wordsapiv1.p.mashape.com/words/"+word
@@ -1031,6 +1061,7 @@ def highlightdefinition(word):
                "x-rapidapi-key": "fd1f8ffa7bmsh11a27ed783e94dbp19198cjsn072eae335940"}
     r = requests.get(url, headers=headers)
     r = r.json()
+    print(r)
     try:
         results = {}
         data = r["results"][0]
@@ -1066,21 +1097,14 @@ def highlightdefinition(word):
             results["derivation"] = ""
         return results
     except:
-        url = "https://en.wikipedia.org/w/api.php"
-        params = {
-            "action": "query",
-            "format": "json",
-            "list": "search",
-            "srsearch": word
-        }
-        r = requests.get(url, params)
-        data = r.json()
-        definitions = []
-        if data['query']['search'][0]['title'].lower() == word:
+        search_terms = mediawikiapi.search(word.lower())
+        if search_terms:
             results = {}
-            search = data['query']['search']
-            for s in search:                
-                results[s["title"]] = BeautifulSoup(s["snippet"], "lxml").text
-            return results
+            wiki_data = {}
+            for term in search_terms:
+                text = mediawikiapi.summary(term, sentences=1)
+                wiki_data[term] = text
+            results["wikipedia"] = wiki_data
         else:
-            return "Oops... can't find definition!"
+            results = "Oops... couldn't find a definition!"
+        return results
