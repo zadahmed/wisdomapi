@@ -85,7 +85,7 @@ def wisdom(search_me, pdfurl):
         #print("TEXT done: ", datetime.utcnow())
         summary = wisdomaiengine.summarisepdfdocument(text)
         #print("SUMMARY done: ", datetime.utcnow())
-        topics = wisdomaiengine.wordcloud(text)
+        topics = wisdomaiengine.wordcloud(search_me, text)
         #print("TOPICS done: ", datetime.utcnow())
         if topics is None:
             topics = ['No Topics Found']
@@ -169,7 +169,7 @@ def search(search_me):
             papers.append([title, summary, date, authors, pdf_url])
             wordpapers.append(summary)
         wordpapers = " ".join(w for w in wordpapers)
-        wordcloud = wisdomaiengine.wordcloud(wordpapers)
+        wordcloud = wisdomaiengine.wordcloud(search_me, wordpapers)
     else:
         wordcloud = "No topics found!..."
     # check if search_term has been run before
