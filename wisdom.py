@@ -150,7 +150,7 @@ def search(search_me):
             # publish date
             publish_date = str(paper["published"])
             dt = parser.parse(publish_date)
-            date = str(dt.day) + "-" + str(dt.month) + "-" + str(dt.year)
+            date = str(dt.strftime('%B')) + " " + str(dt.day) + ", " + str(dt.year)
             # authors
             authors_list = paper["authors"]
             authors = ""
