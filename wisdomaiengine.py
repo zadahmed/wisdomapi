@@ -26,6 +26,7 @@ import os
 import scholarly
 from bs4 import BeautifulSoup
 from mediawikiapi import MediaWikiAPI
+from mediawiki import MediaWiki
 
 
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
@@ -37,6 +38,7 @@ exclude = set(string.punctuation)
 lemma = WordNetLemmatizer()
 escapes = "ΔΩπϴλθ°îĵk̂ûαβγδεζηθικλμνξοπρςστυφχψωΓΔΘΛΞΠΣΦΨΩϴ≤=∂"
 mediawikiapi = MediaWikiAPI()
+mediawiki = MediaWiki()
 
 extras = ["et", "al", "le", "eg"]
 for extra in extras:
@@ -1016,7 +1018,7 @@ def getgooglescholar(search_term, quantity=10):
         return "Unable to collect Google Scholar results..."
 
 
-def definition(search_me):
+def factualsearch(search_me):
     """
     Get factual definition of the Wisdom search term
     ------------------
@@ -1030,6 +1032,10 @@ def definition(search_me):
     
     """
     # Wikipedia
+    # pages = mediawiki.allpages(search_me)
+    # results = {}
+    # for page in pages:
+    #     results[page] = [mediawiki.page(p).categories, mediawiki.page(p).summary]
     search_terms = mediawikiapi.search(search_me.lower())
     if search_terms:
         results = {}
@@ -1060,44 +1066,45 @@ def highlighter(word):
     
     """
     url = "https://wordsapiv1.p.mashape.com/words/"+word
-    headers = {"x-rapidapi-host": "wordsapiv1.p.rapidapi.com", 
-               "x-rapidapi-key": "fd1f8ffa7bmsh11a27ed783e94dbp19198cjsn072eae335940"}
+    headers = {"x-rapidapi-host": "wordsapiv1.p.rapidapi.com", "x-rapidapi-key": "fd1f8ffa7bmsh11a27ed783e94dbp19198cjsn072eae335940"}
     r = requests.get(url, headers=headers)
     r = r.json()
-    print(r)
+    results = []
     try:
-        results = {}
-        data = r["results"][0]
-        # definition
-        if "definition" in data:
-            results["definition"] = data["definition"]
-        else:
-            results["definition"] = ""
-        # synonyms
-        if "synonyms" in data:
-            results["synonyms"] = data["synonyms"]
-        else:
-            results["synonyms"] = ""
-        # in category
-        if "inCategory" in data:
-            results["inCategory"] = data["inCategory"]
-        else:
-            results["inCategory"] = ""
-        # has category
-        if "hasCategories" in data:
-            results["hasCategories"] = data["hasCategories"]
-        else:
-            results["hasCategories"] = ""
-        # has types
-        if "hasTypes" in data:
-            results["hasTypes"] = data["hasTypes"]
-        else:
-            results["hasTypes"] = ""
-        # derivation
-        if "derivation" in data:
-            results["derivation"] = data["derivation"]
-        else:
-            results["derivation"] = ""
+        definitions = r["results"]
+        for d in definitions:
+            data = {}
+            # definition
+            if "definition" in d:
+                data["definition"] = d["definition"]
+            else:
+                data["definition"] = ""
+            # synonyms
+            if "synonyms" in d:
+                data["synonyms"] = d["synonyms"]
+            else:
+                data["synonyms"] = ""
+            # in category
+            if "inCategory" in d:
+                data["inCategory"] = d["inCategory"]
+            else:
+                data["inCategory"] = ""
+            # has category
+            if "hasCategories" in d:
+                data["hasCategories"] = d["hasCategories"]
+            else:
+                data["hasCategories"] = ""
+            # has types
+            if "hasTypes" in d:
+                data["hasTypes"] = d["hasTypes"]
+            else:
+                data["hasTypes"] = ""
+            # derivation
+            if "derivation" in d:
+                data["derivation"] = d["derivation"]
+            else:
+                data["derivation"] = ""
+            results.append(data)
         return results
     except:
         search_terms = mediawikiapi.search(word.lower())
@@ -1111,4 +1118,3 @@ def highlighter(word):
         else:
             results = "Oops... couldn't find a definition!"
         return results
-

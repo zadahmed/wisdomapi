@@ -124,7 +124,7 @@ def search(search_me):
             # wiki_def = wiki_def.replace("** )", ")")
             # wiki_def = wiki_def.replace("**", "")
             # wiki_def = wiki_def.replace("_", "")
-            wiki_def = wisdomaiengine.definition(search_me)
+            wiki_def = wisdomaiengine.factualsearch(search_me.lower())
         # summarise into 5 bullet points
         #wiki_key_points = wisdomaiengine.summarisepdfdocument(wiki_def["wikipedia"])
     except:
@@ -226,8 +226,8 @@ def byod():
         return jsonob
 
 
-@app.route('/definition/<string:word>')
-def definition(word):
+@app.route('/highlight/<string:word>')
+def highlight(word):
     word = word.strip()
     results = wisdomaiengine.highlighter(word)
     jsonob = jsonify(results=results)
