@@ -1035,8 +1035,11 @@ def definition(search_me):
         results = {}
         wiki_data = {}
         for term in search_terms:
-            text = mediawikiapi.summary(term)
-            wiki_data[term] = text
+            try:
+                text = mediawikiapi.summary(term)
+                wiki_data[term] = text
+            except:
+                pass
         results["wikipedia"] = wiki_data
     else:
         results = "Oops... couldn't find anything on Wikipedia!"
