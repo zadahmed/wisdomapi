@@ -977,12 +977,10 @@ def getgooglescholar(search_term, quantity=10):
         return "Unable to find Google Scholar results..."
     try:
         # loop for 'quantity' and write results into lists
-        titles = []
-        e_docs = []
-        urls = []
-        abstracts = []
+        papers = []
         cnt = 1
         for i in search_query:
+            data = []
             if cnt > quantity:
                 break
             else:
@@ -990,30 +988,37 @@ def getgooglescholar(search_term, quantity=10):
                 #result = next(search_query).fill()
                 # titles
                 try:
-                    result.bib['title']
-                    titles.append(result.bib['title'])
+                    data.append(result.bib['title'])
                 except:
-                    titles.append("")
+                    data.append("")
+                # author
+                try:
+                    data.append(result.bib['author'])
+                except:
+                    data.append("")
+                # cited_by
+                try:
+                    data.append(result.bib['citedby'])
+                except:
+                    data.append("")
                 # e documents
                 try:
-                    result.bib['eprint']
-                    e_docs.append(result.bib['eprint'])
+                    data.append(result.bib['eprint'])
                 except:
-                    e_docs.append("")
+                    data.append("")
                 # urls
                 try:
-                    result.bib['url']
-                    urls.append(result.bib['url'])
+                    data.append(result.bib['url'])
                 except:
-                    urls.append("")
+                    data.append("")
                 # abstracts
                 try:
-                    result.bib['abstract']
-                    abstracts.append(result.bib['abstract'])
+                    data.append(result.bib['abstract'])
                 except:
-                    abstracts.append("")
+                    data.append("")
                 cnt += 1
-        return titles, e_docs, urls, abstracts
+            papers.append(data)
+        return papers
     except:
         return "Unable to collect Google Scholar results..."
 

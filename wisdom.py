@@ -121,19 +121,17 @@ def search(category, search_me):
     except:
         wiki_def = "Oops... couldn't find {}!".format(search_me)
         #wiki_key_points = ""
+
+    research_papers = {}
     # get arxiv results
     try:
-        result = arxiv.query(query=search_me.lower(), id_list=[],
+        arxiv_results = arxiv.query(query=search_me.lower(), id_list=[],
                              max_results=10, start = 0, sort_by="relevance",
                              sort_order="descending", prune=False,
                              iterative=False, max_chunk_results=10)
-    except:
-        result = None
-    # get results and wordcloud
-    if result:
         papers = []
-        wordpapers = []
-        for paper in result:
+        all_papers = []
+        for paper in arxiv_results:
             # title
             title = paper['title_detail']['value']
             title = title.replace('\n', '')
@@ -160,10 +158,25 @@ def search(category, search_me):
             # url
             pdf_url = paper['pdf_url']
             papers.append([title, summary, date, authors, pdf_url])
-            wordpapers.append(summary)
-        wordpapers = " ".join(w for w in wordpapers)
-        wordcloud = wisdomaiengine.wordcloud(search_me, wordpapers)
-    else:
+            all_papers.append(summary)
+        research_papers["arxiv"] = papers
+    except:
+        research_papers["arxiv"] = ""
+
+    # get google scholar results
+    try:
+        google_scholar = wisdomaiengine.getgooglescholar(search_me.lower())
+        research_papers["google scholar"] = google_scholar
+        for paper in google_scholar:
+            all_papers.append(paper[-1])
+    except:
+        research_papers["google scholar"] = ""
+
+    # get wordcloud of all papers
+    try:
+        all_papers_text = " ".join(a for a in all_papers)
+        wordcloud = wisdomaiengine.wordcloud(search_me, all_papers_text)
+    except:
         wordcloud = "No topics found!..."
     # check if search_term has been run before
     #results = db_search_terms.find_one({"value": search_me.lower()})
@@ -199,7 +212,7 @@ def search(category, search_me):
     jsonob = jsonify(search=search_me,
                      summary=wiki_def, 
                      #key_points=wiki_key_points,
-                     papers=papers,
+                     papers=research_papers,
                      wordcloud=wordcloud)
     return jsonob
 
