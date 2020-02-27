@@ -1033,20 +1033,23 @@ def factualsearch(category, search_me):
     
     """
     # factual search
-    pages = wikipedia.allpages(search_me)
-    final_pages = []
     if category == "topic":
+        pages = wikipedia.allpages(search_me)
+        final_pages = []
         for page in pages:
             try:
-                categories = wikipedia.page(page).categories
-                scan = " ".join(c for c in categories).lower()
-                print(scan)
-                if search_me in page.lower() or search_me in scan:
+                #categories = wikipedia.page(page).categories
+                #scan = " ".join(c for c in categories).lower()
+                #if search_me in page.lower() or search_me in scan:
+                if search_me == page.lower() or search_me == re.sub(" ", "", page.lower()) or search_me[:-1] == page.lower() or search_me[:-1] == re.sub(" ", "", page.lower()):
                     final_pages.append(page)
             except:
                 pass
     if category == "company":
-        matches = ["establishm", "compan"]
+        pages = wikipedia.allpages(search_me)
+        final_pages = []
+        #matches = ["establishm", "compan"]
+        matches = ["compan"]
         for page in pages:
             try:
                 categories = wikipedia.page(page).categories
@@ -1059,50 +1062,52 @@ def factualsearch(category, search_me):
             except:
                 pass
     if category == "author":
-        try:
-            search_query = scholarly.search_author(search_term)
-            # loop for 'quantity' and write results into lists
-            name = []
-            affiliation = []
-            cited_by = []
-            interests = []
-            cnt = 1
-            for i in search_query:
-                if cnt > 10:
-                    break
-                else:
-                    result = next(search_query)
-                    #result = next(search_query).fill()
-                    # names
+        #try:
+        search_query = scholarly.search_author(search_me)
+        # loop for 'quantity' and write results into lists
+        name = []
+        affiliation = []
+        cited_by = []
+        interests = []
+        cnt = 0
+        while cnt < 5:
+            try:
+                result = next(search_query)
+                #result = next(search_query).fill()
+                # names
+                name_split = search_me.split()
+                dummy = 0
+                for n in name_split:
+                    if n in result.name.lower():
+                        dummy += 1
+                if dummy == len(name_split):
                     try:
-                        result.bib['name']
-                        titles.append(result.bib['name'])
+                        name.append(result.name)
                     except:
-                        titles.append("")
+                        name.append("")
                     # affiliations
                     try:
-                        result.bib['affiliation']
-                        affiliation.append(result.bib['affiliation'])
+                        affiliation.append(result.affiliation)
                     except:
-                        e_docs.append("")
+                        affiliation.append("")
                     # cited by
                     try:
-                        result.bib['citedby']
-                        cited_by.append(result.bib['citedby'])
+                        cited_by.append(result.citedby)
                     except:
                         cited_by.append("")
                     # interests
                     try:
-                        result.bib['interests']
-                        interests.append(result.bib['interests'])
+                        interests.append(result.interests)
                     except:
                         interests.append("")
-                    cnt += 1
-            results = [names, affiliation, cited_by, interests]
-            return results
-        except:
-            results = "Couldn't find author..."
-            return results
+                cnt += 1
+            except:
+                break
+        results = [name, affiliation, cited_by, interests]
+        return results
+        # except:
+        #     results = "Couldn't find author..."
+        #     return results
 
     if final_pages:
         # get results
