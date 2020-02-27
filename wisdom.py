@@ -104,32 +104,22 @@ def wisdom(search_me, pdfurl):
 @app.route('/search/<string:category>/<string:search_me>', methods=['GET'])
 def search(category, search_me):
     search_me = search_me.strip()
-    # NOW: category = "topic", "company", "author"
     # get wikipedia
-    #try:
-    # see if it is saved in db
-    search_term = db_search_terms.find_one({"value": search_me.lower()})
-    if search_term:
-        search_id = search_term.get("_id")
-        wiki = db_wikipedia.find_one({"search_id": search_id})
-        if wiki:
-            wiki_def = wiki.get('wiki_summary')
-            #wiki_key_points = wiki.get('wiki_key_points')
-    # if not, use mediawiki API
-    else:
-        # page = wptools.page(search_me.lower())
-        # r = page.get()
-        # wiki_def = r.data['extext']
-        # aliases = r.data['aliases']
-        # wiki_def = wiki_def.replace("( **", "(")
-        # wiki_def = wiki_def.replace("** )", ")")
-        # wiki_def = wiki_def.replace("**", "")
-        # wiki_def = wiki_def.replace("_", "")
-        wiki_def = wisdomaiengine.factualsearch(category, search_me.lower())
-        # summarise into 5 bullet points
-        #wiki_key_points = wisdomaiengine.summarisepdfdocument(wiki_def["wikipedia"])
-    #except:
-    #    wiki_def = "Oops... couldn't find {}!".format(search_me)
+    try:
+        # see if it is saved in db
+        search_term = db_search_terms.find_one({"value": search_me.lower()})
+        if search_term:
+            search_id = search_term.get("_id")
+            wiki = db_wikipedia.find_one({"search_id": search_id})
+            if wiki:
+                wiki_def = wiki.get('wiki_summary')
+        # if not, use mediawiki API
+        else:
+            wiki_def = wisdomaiengine.factualsearch(category, search_me.lower())
+            # summarise into 5 bullet points
+            #wiki_key_points = wisdomaiengine.summarisepdfdocument(wiki_def["wikipedia"])
+    except:
+        wiki_def = "Oops... couldn't find {}!".format(search_me)
         #wiki_key_points = ""
     # get arxiv results
     try:
@@ -208,7 +198,7 @@ def search(category, search_me):
     # return json object
     jsonob = jsonify(search=search_me,
                      summary=wiki_def, 
-                     #key_points=wiki_key_points, 
+                     #key_points=wiki_key_points,
                      papers=papers,
                      wordcloud=wordcloud)
     return jsonob

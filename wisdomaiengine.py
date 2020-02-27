@@ -1032,7 +1032,7 @@ def factualsearch(category, search_me):
     - results (dict): nested dictionary of data sources and results
     
     """
-    # factual search
+    # get factual search pages
     if category == "topic":
         pages = wikipedia.allpages(search_me)
         final_pages = []
@@ -1062,71 +1062,58 @@ def factualsearch(category, search_me):
             except:
                 pass
     if category == "author":
-        #try:
-        search_query = scholarly.search_author(search_me)
-        # loop for 'quantity' and write results into lists
-        name = []
-        affiliation = []
-        cited_by = []
-        interests = []
-        cnt = 0
-        while cnt < 5:
-            try:
-                result = next(search_query)
-                #result = next(search_query).fill()
-                # names
-                name_split = search_me.split()
-                dummy = 0
-                for n in name_split:
-                    if n in result.name.lower():
-                        dummy += 1
-                if dummy == len(name_split):
-                    try:
-                        name.append(result.name)
-                    except:
-                        name.append("")
-                    # affiliations
-                    try:
-                        affiliation.append(result.affiliation)
-                    except:
-                        affiliation.append("")
-                    # cited by
-                    try:
-                        cited_by.append(result.citedby)
-                    except:
-                        cited_by.append("")
-                    # interests
-                    try:
-                        interests.append(result.interests)
-                    except:
-                        interests.append("")
-                cnt += 1
-            except:
-                break
-        results = [name, affiliation, cited_by, interests]
-        return results
-        # except:
-        #     results = "Couldn't find author..."
-        #     return results
-
+        try:
+            search_query = scholarly.search_author(search_me)
+            # loop for 'quantity' and write results into lists
+            name = []
+            affiliation = []
+            cited_by = []
+            interests = []
+            cnt = 0
+            while cnt < 5:
+                try:
+                    result = next(search_query)
+                    #result = next(search_query).fill()
+                    # names
+                    name_split = search_me.split()
+                    dummy = 0
+                    for n in name_split:
+                        if n in result.name.lower():
+                            dummy += 1
+                    if dummy == len(name_split):
+                        try:
+                            name.append(result.name)
+                        except:
+                            name.append("")
+                        # affiliations
+                        try:
+                            affiliation.append(result.affiliation)
+                        except:
+                            affiliation.append("")
+                        # cited by
+                        try:
+                            cited_by.append(result.citedby)
+                        except:
+                            cited_by.append("")
+                        # interests
+                        try:
+                            interests.append(result.interests)
+                        except:
+                            interests.append("")
+                    cnt += 1
+                except:
+                    break
+            results = [name, affiliation, cited_by, interests]
+            return results
+        except:
+            results = "Couldn't find author..."
+            return results
+    # get wikipedia summaries
     if final_pages:
         # get results
         results = {}
         for page in final_pages:
             results[page] = [wikipedia.page(page).summary]
-        # search_terms = mediawikiapi.search(search_me.lower())
-        # if search_terms:
-        #     results = {}
-        #     wiki_data = {}
-        #     for term in search_terms:
-        #         try:
-        #             text = mediawikiapi.summary(term)
-        #             wiki_data[term] = text
-        #         except:
-        #             pass
-        #     results["wikipedia"] = wiki_data
-        # else:
-        #     results = "Oops... couldn't find anything on Wikipedia!"
         return results
     else:
         results = "Couldn't find it... try one of these: "
