@@ -60,6 +60,11 @@ except:
 def home():
     return jsonify({'msg':'Hello World'})
 
+
+########
+# APIs #
+########
+
 # wisdom engine
 @app.route('/wisdom/<string:search_me>/<path:pdfurl>', methods=['GET'])
 def wisdom(search_me, pdfurl):
@@ -83,11 +88,8 @@ def wisdom(search_me, pdfurl):
             pass
     else:
         text = wisdomaiengine.pdfdocumentextracter(pdfurl)
-        #print("TEXT done: ", datetime.utcnow())
         summary = wisdomaiengine.summarisepdfdocument(text)
-        #print("SUMMARY done: ", datetime.utcnow())
         topics = wisdomaiengine.wordcloud(search_me, text)
-        #print("TOPICS done: ", datetime.utcnow())
         if topics is None:
             topics = ['No Topics Found']
         # write data to arxiv collection
@@ -240,4 +242,4 @@ def highlight(word):
                                                                                        
 # run server
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',threaded=True, port=5000)
+    app.run(host='0.0.0.0', threaded=True, port=5000)
