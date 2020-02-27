@@ -91,19 +91,20 @@ def wisdom(search_me, pdfurl):
         if topics is None:
             topics = ['No Topics Found']
         # write data to arxiv collection
-        search_term = db_search_terms.find_one({"value": search_me.lower()})
-        search_id = search_term.get("_id")
-        data = {"search_id": search_id, "url": pdfurl, "text": text,
-                "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
-        x = db_arxiv.insert(data, check_keys=False)
+        #search_term = db_search_terms.find_one({"value": search_me.lower()})
+        #search_id = search_term.get("_id")
+        #data = {"search_id": search_id, "url": pdfurl, "text": text,
+        #        "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
+        #x = db_arxiv.insert(data, check_keys=False)
     summaryjson = jsonify(wisdomtopics=topics,
                           wisdomsummary=summary)
     return summaryjson
 
 # search
-@app.route('/search/<string:search_me>', methods=['GET'])
-def search(search_me):
+@app.route('/search/<string:category>/<string:search_me>', methods=['GET'])
+def search(category, search_me):
     search_me = search_me.strip()
+    # NOW: category = "topic", "company", "author"
     # get wikipedia
     try:
         # see if it is saved in db
@@ -124,7 +125,7 @@ def search(search_me):
             # wiki_def = wiki_def.replace("** )", ")")
             # wiki_def = wiki_def.replace("**", "")
             # wiki_def = wiki_def.replace("_", "")
-            wiki_def = wisdomaiengine.factualsearch(search_me.lower())
+            wiki_def = wisdomaiengine.factualsearch(category, search_me.lower())
         # summarise into 5 bullet points
         #wiki_key_points = wisdomaiengine.summarisepdfdocument(wiki_def["wikipedia"])
     except:
@@ -175,41 +176,41 @@ def search(search_me):
     else:
         wordcloud = "No topics found!..."
     # check if search_term has been run before
-    results = db_search_terms.find_one({"value": search_me.lower()})
-    if results:
-        search_id = results.get('_id')
-    else:
+    #results = db_search_terms.find_one({"value": search_me.lower()})
+    #if results:
+    #    search_id = results.get('_id')
+    #else:
         # write data to search_terms collection
-        data = {"value": search_me.lower()}
-        search_id = db_search_terms.insert(data, check_keys=False)
+    #    data = {"value": search_me.lower()}
+        #search_id = db_search_terms.insert(data, check_keys=False)
     # write data to searches collection
-    data = {"search_id": search_id, "datetime": datetime.utcnow()}
-    x = db_searches.insert(data, check_keys=False)
+    #data = {"search_id": search_id, "datetime": datetime.utcnow()}
+    #x = db_searches.insert(data, check_keys=False)
     # save data to wikipedia collection
-    wiki = db_wikipedia.find_one({"search_id": search_id})
-    if wiki:
-        # update in db if data is 7 days or older
-        last_updated = datetime.utcnow() - wiki.get("datetime")
-        last_updated_diff = last_updated.days
-        if last_updated_diff > 1:
-            data = {"search_id": search_id, "wiki_summary": wiki_def,
-                    #"wiki_key_points": wiki_key_points, 
-                    "datetime": datetime.utcnow()}
-            db_wikipedia.update({"search_id": search_id}, {"$set": data})
-        else:
-            pass
-    else:
-        data = {"search_id": search_id,
-                "wiki_summary": wiki_def, 
-                #"wiki_key_points": wiki_key_points, 
-                "datetime": datetime.utcnow()}
-        x = db_wikipedia.insert(data, check_keys=False)
+    #wiki = db_wikipedia.find_one({"search_id": search_id})
+    # if wiki:
+    #     # update in db if data is 7 days or older
+    #     last_updated = datetime.utcnow() - wiki.get("datetime")
+    #     last_updated_diff = last_updated.days
+    #     if last_updated_diff > 1:
+    #         data = {"search_id": search_id, "wiki_summary": wiki_def,
+    #                 #"wiki_key_points": wiki_key_points, 
+    #                 "datetime": datetime.utcnow()}
+    #         db_wikipedia.update({"search_id": search_id}, {"$set": data})
+    #     else:
+    #         pass
+    # else:
+    #     data = {"search_id": search_id,
+    #             "wiki_summary": wiki_def, 
+    #             #"wiki_key_points": wiki_key_points, 
+    #             "datetime": datetime.utcnow()}
+        #x = db_wikipedia.insert(data, check_keys=False)
     # return json object
     jsonob = jsonify(search=search_me,
-                    summary=wiki_def, 
-                    #key_points=wiki_key_points, 
-                    papers=papers,
-                    wordcloud=wordcloud)
+                     summary=wiki_def, 
+                     #key_points=wiki_key_points, 
+                     papers=papers,
+                     wordcloud=wordcloud)
     return jsonob
 
 # bring your own document

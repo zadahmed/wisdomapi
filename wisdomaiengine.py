@@ -38,7 +38,7 @@ exclude = set(string.punctuation)
 lemma = WordNetLemmatizer()
 escapes = "ΔΩπϴλθ°îĵk̂ûαβγδεζηθικλμνξοπρςστυφχψωΓΔΘΛΞΠΣΦΨΩϴ≤=∂"
 mediawikiapi = MediaWikiAPI()
-mediawiki = MediaWiki()
+wikipedia = MediaWiki()
 
 extras = ["et", "al", "le", "eg"]
 for extra in extras:
@@ -1018,38 +1018,75 @@ def getgooglescholar(search_term, quantity=10):
         return "Unable to collect Google Scholar results..."
 
 
-def factualsearch(search_me):
+def factualsearch(category, search_me):
     """
     Get factual definition of the Wisdom search term
     ------------------
     Get multiple definitions of the search term
     
     INPUT:
+    - category (string): search category, e.g. topic, company, author...
     - search_me (string): search term
     
     OUTPUT:
     - results (dict): nested dictionary of data sources and results
     
     """
-    # Wikipedia
-    # pages = mediawiki.allpages(search_me)
-    # results = {}
-    # for page in pages:
-    #     results[page] = [mediawiki.page(p).categories, mediawiki.page(p).summary]
-    search_terms = mediawikiapi.search(search_me.lower())
-    if search_terms:
-        results = {}
-        wiki_data = {}
-        for term in search_terms:
+    # factual search
+    pages = wikipedia.allpages(search_me)
+    final_pages = []
+    if category == "topic":
+        for page in pages:
             try:
-                text = mediawikiapi.summary(term)
-                wiki_data[term] = text
+                categories = wikipedia.page(page).categories
+                scan = " ".join(c for c in categories).lower()
+                print(scan)
+                if search_me in page.lower() or search_me in scan:
+                    final_pages.append(page)
             except:
                 pass
-        results["wikipedia"] = wiki_data
+    if category == "company":
+        matches = ["establishm", "compan"]
+        for page in pages:
+            try:
+                categories = wikipedia.page(page).categories
+                scan = " ".join(c for c in categories).lower()
+                if search_me in page.lower():
+                    for match in matches:
+                        if match in scan:
+                            final_pages.append(page)
+                            break
+            except:
+                pass
+    if category == "author":
+        pass
+        # add code in here to get info about authors
+    if final_pages:
+        # get results
+        results = {}
+        for page in final_pages:
+            results[page] = [wikipedia.page(page).summary]
+        # search_terms = mediawikiapi.search(search_me.lower())
+        # if search_terms:
+        #     results = {}
+        #     wiki_data = {}
+        #     for term in search_terms:
+        #         try:
+        #             text = mediawikiapi.summary(term)
+        #             wiki_data[term] = text
+        #         except:
+        #             pass
+        #     results["wikipedia"] = wiki_data
+        # else:
+        #     results = "Oops... couldn't find anything on Wikipedia!"
+        return results
     else:
-        results = "Oops... couldn't find anything on Wikipedia!"
-    return results
+        results = "Couldn't find a definition... try one of these: "
+        alternatives = wikipedia.allpages(search_me)
+        for alt in alternatives:
+            results += alt + ", "
+        results = results[:-2]
+        return results
 
 
 def highlighter(word):
