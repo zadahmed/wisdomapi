@@ -1059,8 +1059,51 @@ def factualsearch(category, search_me):
             except:
                 pass
     if category == "author":
-        pass
-        # add code in here to get info about authors
+        try:
+            search_query = scholarly.search_author(search_term)
+            # loop for 'quantity' and write results into lists
+            name = []
+            affiliation = []
+            cited_by = []
+            interests = []
+            cnt = 1
+            for i in search_query:
+                if cnt > 10:
+                    break
+                else:
+                    result = next(search_query)
+                    #result = next(search_query).fill()
+                    # names
+                    try:
+                        result.bib['name']
+                        titles.append(result.bib['name'])
+                    except:
+                        titles.append("")
+                    # affiliations
+                    try:
+                        result.bib['affiliation']
+                        affiliation.append(result.bib['affiliation'])
+                    except:
+                        e_docs.append("")
+                    # cited by
+                    try:
+                        result.bib['citedby']
+                        cited_by.append(result.bib['citedby'])
+                    except:
+                        cited_by.append("")
+                    # interests
+                    try:
+                        result.bib['interests']
+                        interests.append(result.bib['interests'])
+                    except:
+                        interests.append("")
+                    cnt += 1
+            results = [names, affiliation, cited_by, interests]
+            return results
+        except:
+            results = "Couldn't find author..."
+            return results
+
     if final_pages:
         # get results
         results = {}
@@ -1081,7 +1124,7 @@ def factualsearch(category, search_me):
         #     results = "Oops... couldn't find anything on Wikipedia!"
         return results
     else:
-        results = "Couldn't find a definition... try one of these: "
+        results = "Couldn't find it... try one of these: "
         alternatives = wikipedia.allpages(search_me)
         for alt in alternatives:
             results += alt + ", "
