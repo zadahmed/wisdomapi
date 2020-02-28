@@ -27,6 +27,9 @@ import scholarly
 from bs4 import BeautifulSoup
 from mediawikiapi import MediaWikiAPI
 from mediawiki import MediaWiki
+from pysummarization.nlpbase.auto_abstractor import AutoAbstractor
+from pysummarization.tokenizabledoc.simple_tokenizer import SimpleTokenizer
+from pysummarization.abstractabledoc.top_n_rank_abstractor import TopNRankAbstractor
 
 
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
@@ -41,6 +44,15 @@ symbols = "ΔΩπϴλθ°αβγδεζηθικλμνξοπρςστυφχψωΓΔ�
 math = "≥∞<≤√=>+×"
 mediawikiapi = MediaWikiAPI()
 wikipedia = MediaWiki()
+
+# Object of automatic summarization.
+auto_abstractor = AutoAbstractor()
+# Set tokenizer.
+auto_abstractor.tokenizable_doc = SimpleTokenizer()
+# Set delimiter for making a list of sentence.
+auto_abstractor.delimiter_list = [".", "\n"]
+# Object of abstracting and filtering document.
+abstractable_doc = TopNRankAbstractor()
 
 extras = ["et", "al", "le", "eg"]
 for extra in extras:
@@ -535,6 +547,35 @@ def summarisepdfdocument(text, key_points=5, complexity=5):
     else:
         doc_summary = None
     return doc_summary
+    # if text:
+    #     # summarize document.
+    #     result_dict = auto_abstractor.summarize(text, abstractable_doc)
+    #     summary = []
+    #     for sentence in result_dict["summarize_result"]:
+    #         summary.append(sentence)
+    #     doc_summary = []
+    #     for sent in summary:
+    #         try:
+    #             # remove word abstract from start of sentence if present
+    #             if "abstract" in sent.lower():
+    #                 if "abstract" in sent.lower()[:15]:
+    #                     sentence = re.sub("abstract", "", sent)
+    #                     sentence = re.sub("Abstract", "", sentence)
+    #                     sentence = re.sub("ABSTRACT", "", sentence)
+    #                     sentence = sentence.strip()
+    #                     if sentence[0] in string.punctuation or sentence[0] == "—":
+    #                         sentence = sentence[1:]
+    #                         sentence = sentence.strip()
+    #                     doc_summary.append("• "+sentence)
+    #                 else:
+    #                     doc_summary.append("• "+sent)
+    #             else:
+    #                 doc_summary.append("• "+sent)
+    #         except:
+    #             pass
+    # else:
+    #     doc_summary = None
+    # return doc_summary
 
 
 def topicsindocument(text):
