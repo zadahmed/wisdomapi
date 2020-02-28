@@ -36,7 +36,9 @@ pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 stop = set(stopwords.words("english"))
 exclude = set(string.punctuation) 
 lemma = WordNetLemmatizer()
-escapes = "ΔΩπϴλθ°îĵk̂ûαβγδεζηθικλμνξοπρςστυφχψωΓΔΘΛΞΠΣΦΨΩϴ≤=∂"
+avoid = "§‡¶@∗"
+symbols = "ΔΩπϴλθ°αβγδεζηθικλμνξοπρςστυφχψωΓΔΘΛΞΠΣΦΨΩϴ∂γβ∈"
+math = "≥∞<≤√=>+×"
 mediawikiapi = MediaWikiAPI()
 wikipedia = MediaWiki()
 
@@ -294,7 +296,7 @@ def pdfdocumentextracter(pdfurl):
         # get bytes stream of web pdf
         if "https" in pdfurl:
             url = pdfurl.split("https:")
-            if "//" != url[:2]:
+            if "//" != url[1][:2]:
                 url = "https:/"+url[1]
                 pdfurl = url
             else:
@@ -317,302 +319,141 @@ def pdfdocumentextracter(pdfurl):
         interpreter = PDFPageInterpreter(rsrcmgr, device)
         pagenos=set()
         # extract all text
-        content = []
+        corpus = []
         for page in PDFPage.get_pages(fp=f, pagenos=pagenos, maxpages=0, caching=True, check_extractable=True):
             interpreter.process_page(page)
         text = retstr.getvalue()
-        content.append(text)
+        corpus.append(text)
         # close apps
         device.close()
         retstr.close()
-    except: 
-        return "Unable to extract all text... try another document"
-    try:
-        # remove noise and numbers at side of document
-        text = []
-        splits = content[0].split("\n\n")
-        for chunk in splits:
-            # if ocr has picked up annoying numbers along side with many "\n"
-            if chunk.count("\n") >= 3:
-                dummy = chunk.split("\n")
-                dummy_cnt = 0
-                for d in dummy:
-                    if len(d)>1:
-                        dummy_cnt += 1
-                if dummy_cnt > 2:
-                    text.append(chunk)
-            else:
-                text.append(chunk)
-    except:
-        print("Error when cleaning text: ", pdfurl)
-    try:
-        # identify abstract
-        if "abstract" in " ".join(i for i in text).lower():
-            cnt = 0
-            while True:
-                if "abstract" in text[cnt].lower():
-                    if len(text[cnt].split()) < 2:
-                        cnt += 1
-                        break
-                    else:
-                        if re.match("^abstract", text[cnt][:8].lower()):
-                            text[cnt] = text[cnt][8:]
-                        break
-                cnt += 1
-            text = text[cnt:]
-    except:
-        print("Error when identifying abstract: ", pdfurl)
-    try:
-        # identify references
-        cnt = 0
-        while True:
-            if "References" in text[cnt] or "Appendix" in text[cnt] or "Bibliography" in text[cnt] or "REFERENCES" in text[cnt] or "acknowledgements" in text[cnt] or "ACKNOWLEDGEMENTS" in text[cnt]:
-                if len(text[cnt].split()) < 3:
-                    break
-                if "\n" in text[cnt]:
-                    break
-            else:
-                #break
-                cnt += 1
-            #cnt += 1
-        if cnt == 0:
-            text = text
-        else:
-            text = text[:cnt]
-        # remove equation number references
-        clean1 = []
-        for t in text:
-            if len(t.split()) == 1:
-                if re.match("^\(\d\)", t):
-                    pass
-                if re.match("\d", t):
-                    pass
-            elif len(t.split()) == 0:
-                pass
-            else:
-                clean1.append(t)
-    except:
-        print("Error when identifying references: ", pdfurl)
-    try:
-        # remove headers
-        clean2 = []
-        cnt = 0
-        while cnt < len(clean1)-1:
-            if len(clean1[cnt].split()) < 10:
-                dummy = re.sub("\d", "", clean1[cnt])
-                dummy = dummy.strip()
-                if len(dummy.split()) <= 1:
-                    pass
-                elif dummy[-1] not in string.punctuation:
-                    dummy2 = re.sub("\d", "", clean1[cnt+1])
-                    dummy2 = re.sub('[^\w\s]','', dummy2)
-                    dummy2 = dummy2.strip()
-                    if dummy2:
-                        if dummy2[0].isupper():
-                            pass
-                        else:
-                            clean2.append(clean1[cnt])
-                    else:
-                        pass
-                else:
-                    clean2.append(clean1[cnt])
-            else:
-                clean2.append(clean1[cnt])
-            cnt += 1
-    except:
-        print("Error when removing headers: ", pdfurl)
-    try:
-        # replace \d.\d with \d~||~\d so blob.sentences doesn't get fooled
-        clean22 = []
-        for c in clean2:
-            if re.search("\d\.\d", c):
-                dummy = ""
-                splits = c.split()
-                for s in splits:
-                    if re.search("\d.\d", s):
-                        text = re.sub("\.", "~||~", s)
-                    else:
-                        text = s
-                    dummy += text+" "
-                clean22.append(dummy)
-            else:
-                clean22.append(c)
-        clean2 = clean22
-    except:
-        print("Error when removing headers: ", pdfurl)
-    try:
-        # remove figure captions
-        clean3 = []
-        cnt = 0
-        while cnt < len(clean2):
-            if re.match('^Fig', clean2[cnt]) or re.match('^fig.', clean2[cnt].lower()) :
-                pass
-            else:
-                clean3.append(clean2[cnt])
-            cnt += 1
-    except:
-        print("Error when removing figure captions: ", pdfurl)
-    try:
-        # remove table data
-        clean4 = []
-        cnt = 0
-        while cnt < len(clean3)-1:
-            if "~||~" in clean3[cnt]:
-                clean4.append(clean3[cnt])
-            elif clean3[cnt][-1] == ".":
-                if re.sub("\d", "", clean3[cnt+1]).strip()[0].islower():
-                    pass
-                else:
-                    clean4.append(clean3[cnt])
-            elif clean3[cnt][-1] == "-" or clean3[cnt][-1] == "-":
-                if clean3[cnt+1][0].islower():
-                    clean4.append(clean3[cnt])
-                else:
-                    pass
-            elif "©" in clean3[cnt]:
-                pass
-            else:
-                clean4.append(clean3[cnt])
-            cnt += 1
-    except:
-        print("Error when removing table data: ", pdfurl)
-    # remove superscripts
-    try:
-        clean5 = []
-        for c in clean4:
-            dummy = re.sub("  ", " ", c)
-            # remove .X-Y superscripts
-            if re.search("\.\d-\d", dummy):
-                text = re.sub("\.\d-\d", "", dummy)
-            else:
-                text = dummy
-            # remove X,Y mid sentence superscripts
-            if re.search("\w\d,\d \w", text):
-                text = re.sub("\d,\d", "", text)
-            else:
-                text = text
-            # remove X,Y end of sentence superscripts
-            if re.search("\w\.\d,\d \w", text):
-                text = re.sub("\d,\d", "", text)
-            else:
-                text = text
-            # remove superscripts at end of sentence
-            if re.search("\.\d [A-Z]", text):
-                text = re.sub("\.\d ", ". ", text)
-            elif re.search("\.\d\d [A-Z]", text):
-                text = re.sub("\.\d\d ", ". ", text)
-            else:
-                text = text
-            # remove mid sentence superscripts
-            if re.search("\w\d \w", text):
-                dummy = ""
-                for t in text.split():
-                    if re.search("^\w\d", t):
-                        dummy += re.sub("\d", "", t)+" "
-                    elif "~||~" in t:
-                        dummy += t+" "
-                    else:
-                        dummy += t+" "
-                text = dummy
-            else:
-                text = text
-            clean5.append(text)
-    except:
-        print("Error removing superscripts")
-        clean5 = clean4
-    try:
-        # remove citations
-        clean6 = " ".join(c for c in clean5)
-        clean6 = re.sub("\(cid:\d\d\)", "", clean6)
-        clean6 = re.sub("\(cid:\d\)", "", clean6)
-        clean6 = re.sub("cid:", "", clean6)
-        clean6 = re.sub("cid", "", clean6)
-        clean6 = re.sub("\(\d\)", "", clean6)
-        clean6 = re.sub("\(\d\d\)", "", clean6)
-        clean6 = re.sub("^\[\d\]", "", clean6)
-        clean6 = re.sub("^\[\d\d\]", "", clean6)
-        clean6 = re.sub("^\[\d,\d\]", "", clean6)
-        clean6 = re.sub("\[\d\d\]", "", clean6)
-        clean6 = re.sub("\[\d,\d\]", "", clean6)
-        clean6 = re.sub(" \[,\].", ".", clean6)
-        clean6 = re.sub(" \[,\]", "", clean6)
-        clean6 = re.sub("\[,\]", "", clean6)
-        clean6 = re.sub("-\n", "", clean6)
-        clean6 = re.sub("\n", " ", clean6)
-        clean6 = re.sub("  ", " ", clean6)
-        # remove math and Figure text
-        blob = TextBlob(clean6)
+        # join all text into string
+        final_text = " ".join(i for i in corpus)
+        final_text = re.sub("al.", "al", final_text)
+        # remove citations 'cid'
+        final_text = re.sub("\(cid:\d\d\d\)", "", final_text)
+        final_text = re.sub("\(cid:\d\d\)", "", final_text)
+        final_text = re.sub("\(cid:\d\)", "", final_text)
+        # process into first pass sentences
+        blob = TextBlob(final_text)
         sentences = [str(sentence) for sentence in blob.sentences]
+        sentences = [s for s in sentences if len(s)>1]
+        # remove figure text
+        sentences = [s for s in sentences if not re.search('Fig', s)]
+        # second pass of sentences
+        sentences2 = []
+        for sent in sentences:
+            blob = TextBlob(sent)
+            for s in blob.sentences:
+                sentences2.append(str(s))
+        sentences = sentences2
+        # remove sentences with greek/foreign symbols
+        no_symbols = []
+        cnt = 0
+        while cnt < len(sentences):
+            counter = 0
+            for symbol in symbols:
+                if symbol in sentences[cnt]:
+                    counter += 1
+                    break
+            if counter == 0:
+                no_symbols.append(sentences[cnt])
+            cnt += 1
         # remove sentences with math
         no_math = []
-        for sentence in sentences:
-            cnt = 0
-            for symbol in escapes:
-                if symbol in sentence:
-                    cnt += 1
-            if cnt == 0:
-                no_math.append(sentence)
-        # remove sentences with "Figure X:" or "Fig X:""
-        no_figs = []
-        for sentence in no_math:
-            if re.search("Figure \d:", sentence):
-                pass
-            elif re.search("Fig. \d:", sentence):
-                pass
-            elif re.search("Fig \d:", sentence):
-                pass
+        cnt = 0
+        while cnt < len(no_symbols):
+            counter = 0
+            for m in math:
+                if m in no_symbols[cnt]:
+                    counter += 1
+                    break
+            if counter == 0:
+                no_math.append(no_symbols[cnt])
+            cnt += 1
+        # remove sentences with strange characters
+        no_avoid = []
+        cnt = 0
+        while cnt < len(no_math):
+            counter = 0
+            for n in avoid:
+                if n in no_math[cnt]:
+                    counter += 1
+                    break
+            if counter == 0:
+                no_avoid.append(no_math[cnt])
+            cnt += 1
+        # remove line breaks from remaining text
+        main_text = " ".join(n for n in no_avoid)
+        main_text = main_text.split("\n")
+        main_text = [m.strip() for m in main_text]
+        # remove text before abstract
+        idx = 0
+        cnt = 0
+        for sent in main_text:
+            if "Abstract" in sent or "ABSTRACT" in sent or "abstract" in sent:
+                if len(sent.split()) < 3:
+                    idx = cnt + 1
             else:
-                no_figs.append(sentence)
-        text = " ".join(str(n) for n in no_figs)
-    except:
-        print("Error when removing citations and math: ", pdfurl)
-    # removing final equations that are leftover as numbers
-    final_sentences = []
-    blob = TextBlob(text)
-    sentences = [str(sentence) for sentence in blob.sentences]
-    for sent in sentences:
-        if re.search("\(\d\d\d\d\)", sent):
-            pass
+                cnt += 1
+        main_text = main_text[idx:]
+        # remove short leftover strings
+        main_sent = []
+        for m in main_text:
+            if len(m)>5:
+                main_sent.append(m)
+        # identify references split text into main and references
+        idx = 0
+        cnt = 0
+        for sent in main_sent:
+            if "References" in sent or "REFERENCES" in sent or "Appendix" in sent or "APPENDIX" in sent or "Bibliogrpahy" in sent or "BIBLIOGRAPHY" in sent:
+                idx = cnt
+            cnt += 1
+        if idx > 0:
+            main_sent_wo_ref = main_sent[:idx]
+            references = main_sent[idx:]
         else:
-            final_sentences.append(sent)
-    # replacing eq. and Fig. with Equation and Figure
-    final_sentences = [re.sub("Fig.", "Figure", f) for f in final_sentences]
-    final_sentences = [re.sub("Eq.", "Equation", f) for f in final_sentences]
-    final_sentences = [re.sub("Eqs.", "Equation", f) for f in final_sentences]
-    # removing sentences with figures - irrelevant to summarisation
-    end_sentences = []
-    for sent in final_sentences:
-        if re.search("Figure", sent):
-            pass
-        else:
-            end_sentences.append(sent)
-    # removing sentences with equation references - irrelevant to summarisation
-    end2_sentences = []
-    for sent in end_sentences:
-        if re.search("Equation", sent):
-            pass
-        else:
-            end2_sentences.append(sent)
-    # replacing \d~||~\d with . to restore float numbers
-    end3_sentences = []
-    for sent in end2_sentences:
-        #print(sent, "\n")
-        if "~||~" in sent:
-            end3_sentences.append(sent.replace("~||~", "."))
-        else:
-            end3_sentences.append(sent)
-    # if sentences starts with punctuation or has been split incorrectly mid sentence - remove
-    end3_sentences = [sent for sent in end3_sentences if sent[0] not in string.punctuation]
-    #end_sentences = [sent for sent in end2_sentences if sent[0].isupper()]
-    # replace " ." with "." at end of sentence
-    end4_sentences = []
-    for e in end3_sentences:
-        if e[-2:] == " .":
-            text = e[:-2]+"."
-        else:
-            text = e
-        end4_sentences.append(text)
-    text = " ".join(e for e in end4_sentences)
+            main_sent_wo_ref = main_sent
+            references = None
+        # third pass of sentences to remove headers
+        sentences3 = []
+        for sent in main_sent_wo_ref:
+            blob = TextBlob(sent)
+            for s in blob.sentences:
+                sentences3.append(str(s))
+        sentences = sentences3
+        # remove headers from text
+        main_sent_wo_headers = []
+        for sent in sentences:
+            cnt = 0
+            dummy = re.sub(r'[^\w\s]', '', sent)
+            dummy = re.sub("\d", "", dummy)
+            dummy = dummy.strip()
+            for i in dummy.split():
+                if i[0].isupper():
+                    cnt += 1
+            if len(dummy.split()) != 0:
+                ratio = cnt/len(dummy.split())
+                if ratio < 0.5:
+                    main_sent_wo_headers.append(sent)
+        # remove noise at start and end of sentences with blank sentences being concatenated
+        main_sent_wo_headers = [m for m in main_sent_wo_headers if m[-2:] != " ."]
+        main_sent_final = []
+        for m in main_sent_wo_headers:
+            if m[:2] == ". ":
+                main_sent_final.append(m[2:])
+            else:
+                main_sent_final.append(m)
+        # join all remaining sentences
+        all_sentences = " ".join(m for m in main_sent_final)
+        # fourth pass of sentences and keep only ones that start with capitalised letter
+        blob = TextBlob(all_sentences)
+        last_split = [str(sentence) for sentence in blob.sentences if sentence[0].isupper()]
+        # join remaining text
+        text = " ".join(s for s in last_split)
+    except Exception as e:
+        text = None
+        print(e)
     # return text
     return text
 
@@ -632,63 +473,67 @@ def summarisepdfdocument(text, key_points=5, complexity=5):
     - doc_summary (list): summary containing top 5 points from PDF document. Points are ranked by important, 1st = most important.
     
     """
-    # Summarisation of top 5 key points
-    sentence_length = complexity*30
-    summary = []
-    blob = TextBlob(text)
-    sentences = [str(sentence) for sentence in blob.sentences]
-    summary_dummy = []
-    # clean up sentences
-    for sent in sentences:
-        try:
-            if "•" in sent and ":" in sent:
-                sentence = re.sub("•", "", sent)
-                summary_dummy.append(sentence)
-            elif "•" in sent[:3]:
-                sentence = re.sub("•", ".", sent)
-                summary_dummy.append(sentence)
-            else:
-                summary_dummy.append(sent)
-        except:
-            pass
-    # a bit more cleaning
-    sentences = summary_dummy
-    for sentence in sentences:
-        try:
-            if sentence.find(":", 0, 1) != -1 and sentence.find("-", 1, 3) != -1:
+    # check if text exists
+    if text:
+        # Summarisation of top 5 key points
+        sentence_length = complexity*30
+        summary = []
+        blob = TextBlob(text)
+        sentences = [str(sentence) for sentence in blob.sentences]
+        summary_dummy = []
+        # clean up sentences
+        for sent in sentences:
+            try:
+                if "•" in sent and ":" in sent:
+                    sentence = re.sub("•", "", sent)
+                    summary_dummy.append(sentence)
+                elif "•" in sent[:3]:
+                    sentence = re.sub("•", ".", sent)
+                    summary_dummy.append(sentence)
+                else:
+                    summary_dummy.append(sent)
+            except:
                 pass
-            else:
-                if len(sentence)>2:
-                    if len(sentence.split()) < sentence_length:
-                        summary.append(sentence)
-        except:
-            pass
-    # identify key points
-    parser = PlaintextParser.from_string(' '.join(str(sentence) for sentence in summary), Tokenizer("english"))
-    summarizer = TextRankSummarizer()
-    doc_summary = summarizer(parser.document, key_points)
-    doc_summary = [str(sentence) for sentence in doc_summary]
-    summary = []
-    for sent in doc_summary:
-        try:
-            # remove word abstract from start of sentence if present
-            if "abstract" in sent.lower():
-                if "abstract" in sent.lower()[:15]:
-                    sentence = re.sub("abstract", "", sent)
-                    sentence = re.sub("Abstract", "", sentence)
-                    sentence = re.sub("ABSTRACT", "", sentence)
-                    sentence = sentence.strip()
-                    if sentence[0] in string.punctuation or sentence[0] == "—":
-                        sentence = sentence[1:]
+        # a bit more cleaning
+        sentences = summary_dummy
+        for sentence in sentences:
+            try:
+                if sentence.find(":", 0, 1) != -1 and sentence.find("-", 1, 3) != -1:
+                    pass
+                else:
+                    if len(sentence)>2:
+                        if len(sentence.split()) < sentence_length:
+                            summary.append(sentence)
+            except:
+                pass
+        # identify key points
+        parser = PlaintextParser.from_string(' '.join(str(sentence) for sentence in summary), Tokenizer("english"))
+        summarizer = TextRankSummarizer()
+        doc_summary = summarizer(parser.document, key_points)
+        doc_summary = [str(sentence) for sentence in doc_summary]
+        summary = []
+        for sent in doc_summary:
+            try:
+                # remove word abstract from start of sentence if present
+                if "abstract" in sent.lower():
+                    if "abstract" in sent.lower()[:15]:
+                        sentence = re.sub("abstract", "", sent)
+                        sentence = re.sub("Abstract", "", sentence)
+                        sentence = re.sub("ABSTRACT", "", sentence)
                         sentence = sentence.strip()
-                    summary.append("• "+sentence)
+                        if sentence[0] in string.punctuation or sentence[0] == "—":
+                            sentence = sentence[1:]
+                            sentence = sentence.strip()
+                        summary.append("• "+sentence)
+                    else:
+                        summary.append("• "+sent)
                 else:
                     summary.append("• "+sent)
-            else:
-                summary.append("• "+sent)
-        except:
-            pass
-    doc_summary = summary
+            except:
+                pass
+        doc_summary = summary
+    else:
+        doc_summary = None
     return doc_summary
 
 
