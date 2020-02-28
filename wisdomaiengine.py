@@ -1195,3 +1195,86 @@ def highlighter(word):
         else:
             results = "Oops... couldn't find a definition!"
         return results
+
+
+def getdoajarticles(search_term, quantity=10):
+    """
+    Get search page results for articles on DOAJ
+    ------------------
+    Return top N results from DOAJ based on search term
+    
+    INPUT:
+    - search_term (string): topic being searched.
+    - quantity (int), optional: number of documents to return
+    
+    OUTPUT:
+    - titles (list): titles of papers
+    - e_docs (list): links to e-documents
+    - urls (list): links to document
+    - abstracts (list): condensed abstracts of documents
+    
+    """
+    try:
+        headers = {"search_query": search_term, "page": "1", "pageSize": str(quantity)}
+        r = requests.get("https://doaj.org/api/v1/search/articles/"+search_term,
+                        headers=headers)
+        data = r.json()
+        results = data["results"]
+        articles = []
+        for doc in results:
+            try:
+                info = []
+                # journal name
+                if "journal" in doc["bibjson"]:
+                    info.append(doc["bibjson"]["journal"]["title"])
+                else:
+                    info.append("")
+                # article title
+                if "title" in doc["bibjson"]:
+                    info.append(doc["bibjson"]["title"])
+                else:
+                    info.append("")
+                # abstract
+                if "abstract" in doc["bibjson"]:
+                    info.append(doc["bibjson"]["abstract"])
+                else:
+                    info.append("")
+                # keywords
+                if "keywords" in doc["bibjson"]:
+                    info.append(doc["bibjson"]["keywords"])
+                else:
+                    info.append("")
+                # author
+                if "author" in doc["bibjson"]:
+                    authors = []
+                    affiliations = []
+                    for author in doc["bibjson"]["author"]:
+                        authors.append(author["name"])
+                        affiliations.append(author["affiliation"])
+                    info.append(list(set(authors)))
+                    info.append(list(set(affiliations)))
+                else:
+                    info.append("")
+                    info.append("")
+                # url
+                if "link" in doc["bibjson"]:
+                    info.append(doc["bibjson"]["link"][0]["url"])
+                else:
+                    info.append("")
+                # date created
+                if "created_date" in doc:
+                    info.append(doc["created_date"])
+                else:
+                    info.append("")
+                # add to articles list
+                articles.append(info)
+            except:
+                pass
+        # return list of articles from DOAJ
+        return articles
+    except:
+        return "Unable to collect DOAJ articles..."
+        
+        
+        
+            

@@ -174,6 +174,15 @@ def search(category, search_me):
     except:
         research_papers["google scholar"] = ""
 
+    # get DOAJ articles
+    try:
+        doaj = wisdomaiengine.getdoajarticles(search_me.lower())
+        research_papers["DOAJ"] = doaj
+        for article in doaj:
+            all_papers.append(article[2])
+    except:
+        research_papers["DOAJ"] = ""
+
     # get wordcloud of all papers
     try:
         all_papers_text = " ".join(a for a in all_papers)
