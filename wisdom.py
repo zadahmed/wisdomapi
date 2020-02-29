@@ -20,6 +20,7 @@ import cv2
 from dateutil import parser
 import requests
 
+
 ##########################
 # INSTANTIATE FLASK & DB #
 ##########################
@@ -228,17 +229,41 @@ def search(category, search_me):
     return jsonob
 
 # bring your own document
-@app.route('/byod', methods=['GET' , 'POST'])
-def byod():
+@app.route('/byod/<string:content_type>', methods=['GET' , 'POST'])
+def byod(content_type):
     if request.method == "GET":
         print('Hi')
     if request.method == "POST":
-        data = request.form.get('image')
-        nparr = np.fromstring(base64.b64decode(data), np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        text = wisdomaiengine.bringyourowndocument(img)
-        jsonob = jsonify(img=text)
-        return jsonob
+        if content_type == "gallery":
+            data = request.form.get('image')
+            nparr = np.fromstring(base64.b64decode(data), np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            text = wisdomaiengine.bringyourowndocument(img)
+            jsonob = jsonify(img=text)
+            return jsonob
+        if content_type == "camera":
+            return None
+        if content_type == "webpage":
+            page = request.form.get('data')
+            r = requests.get(page)
+            html = r.text
+            soup = BeautifulSoup(html, 'html.parser')
+            #soup = BeautifulSoup(html, 'lxml')
+            body = soup.body
+            # remove footer
+            while body.footer:
+                soup.footer.decompose()
+            # remove scripts
+            while body.script:
+                soup.script.decompose()
+            # get p tags
+            main_body = body.find_all(["p"])
+            text = ""
+            for m in main_body:
+                text += m.get_text()+" "
+            text = text.strip()
+            jsonob = jsonify(text=text)
+            return jsonob
 
 
 @app.route('/highlight/<string:word>')
