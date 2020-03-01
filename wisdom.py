@@ -5,7 +5,7 @@
 
 import wptools
 import arxiv
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import os
 import wisdomaiengine
 from urllib.parse import unquote
@@ -59,7 +59,7 @@ except:
 # landing page
 @app.route('/', methods=['GET'])
 def home():
-    return jsonify({'msg':'Hello World'})
+    return render_template("index.html")
 
 
 ########
