@@ -354,11 +354,11 @@ input.input100 {
 
 /*---------------------------------------------*/
 .bg-g1 {
-  background: #7918f2;
-  background: -webkit-linear-gradient(-45deg, #ac32e4, #7918f2, #4801ff);
-  background: -o-linear-gradient(-45deg, #ac32e4, #7918f2, #4801ff);
-  background: -moz-linear-gradient(-45deg, #ac32e4, #7918f2, #4801ff);
-  background: linear-gradient(-45deg, #ac32e4, #7918f2, #4801ff);
+  background: #538ae4;
+  background: -webkit-linear-gradient(-45deg, #538ae4, #2647b5, #1c2aa6);
+  background: -o-linear-gradient(-45deg, #538ae4, #2647b5, #1c2aa6);
+  background: -moz-linear-gradient(-45deg, #538ae4, #2647b5, #1c2aa6);
+  background: linear-gradient(-45deg, #538ae4, #2647b5, #1c2aa6);
 }
 
 
@@ -368,7 +368,7 @@ input.input100 {
 /*//////////////////////////////////////////////////////////////////
 [ Border ]*/
 .bor1 {
-  border-bottom: 3px solid #3a5dff;
+  border-bottom: 3px solid #538ae4;
 }
 
 .bor2 {
@@ -426,11 +426,11 @@ input.input100 {
   height: 100%;
   top: 0;
   left: 0;
-  background: #7918f2;
-  background: -webkit-linear-gradient(45deg, #ac32e4, #7918f2, #4801ff);
-  background: -o-linear-gradient(45deg, #ac32e4, #7918f2, #4801ff);
-  background: -moz-linear-gradient(45deg, #ac32e4, #7918f2, #4801ff);
-  background: linear-gradient(45deg, #ac32e4, #7918f2, #4801ff);
+  background: #538ae4;
+  background: -webkit-linear-gradient(-45deg, #538ae4, #2647b5, #1c2aa6);
+  background: -o-linear-gradient(-45deg, #538ae4, #2647b5, #1c2aa6);
+  background: -moz-linear-gradient(-45deg, #538ae4, #2647b5, #1c2aa6);
+  background: linear-gradient(-45deg, #538ae4, #2647b5, #1c2aa6);
   -webkit-transition: all 0.4s;
   -o-transition: all 0.4s;
   -moz-transition: all 0.4s;
@@ -444,7 +444,7 @@ input.input100 {
 
 /*---------------------------------------------*/
 .how-btn1 {
-  background-color: #3a5dff;
+  background-color: #538ae4;
   border-radius: 25px;
   padding: 0 20px;
 }
