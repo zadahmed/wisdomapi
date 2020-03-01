@@ -78,6 +78,11 @@ def generateState(sess, key):
 # landing page
 @app.route('/', methods=['GET'])
 def home():
+    """
+    Route for Wisdom web page.
+    Web page to show users what Wisdom is, how it works, about
+    the company and how they can download the app.
+    """
     return render_template("index.html")
 
 # sign up
@@ -124,13 +129,13 @@ def login():
         msg = {"status" : { "type" : "success" ,   "message" : "Login page loaded"}}
         return jsonify(msg)
     else:
-        # check state
+        # check the state variable for extra security
         if login_session['state'] != request.args.get('state'):
             message = "cookie was {0} and request was {1}. Invalid state parameter".format(login_session['state'], request.args.get('state'))
             response = make_response(json.dumps(message), 401)
             response.headers['Content-Type'] = 'application/json'
             return response
-        # check if already logged in
+        # check if already logged in with cookie
         cookie = login_session.get('email')
         state = login_session['state']
         if cookie is not None:
@@ -138,7 +143,7 @@ def login():
             if user:
                 msg = {"status" : { "type" : "success" ,   "message" : "User already logged in"}}
                 return jsonify(msg)
-        # log in
+        # otherwise, log in
         email = request.form['email']
         password = request.form['password']
         user = db_users.find_one({"email": email})
@@ -179,6 +184,11 @@ def logout():
 # search
 @app.route('/search/<string:category>/<string:search_me>', methods=['GET'])
 def search(category, search_me):
+    """
+    Wisdom search.
+    User gives a search string and Wisdom finds the definitions,
+    associated research papers and a topical word cloud.
+    """
     search_me = search_me.strip()
     # get wikipedia
     try:
@@ -267,7 +277,8 @@ def search(category, search_me):
         search_id = db_search_terms.insert(data, check_keys=False)
 
     # write data to searches collection
-    data = {"search_id": search_id, "datetime": datetime.utcnow()}
+    data = {"search_id": search_id, "user": login_session["profile_id"],
+            "datetime": datetime.utcnow()}
     x = db_searches.insert(data, check_keys=False)
 
     # save data to wikipedia collection
@@ -299,6 +310,11 @@ def search(category, search_me):
 # wisdom engine
 @app.route('/wisdom/<string:search_me>/<string:source>/<path:pdfurl>', methods=['GET'])
 def wisdom(search_me, source, pdfurl):
+    """
+    Wisdom AI engine.
+    This extracts insights from documents and returns key points,
+    abstracts, wordclouds and PDF viewer if possible.
+    """
     ### source needs to be name of data source ("arxiv", "google scholar", "doaj")
     search_me = search_me.strip()
     # check if pdfurl has been found before
@@ -338,20 +354,34 @@ def wisdom(search_me, source, pdfurl):
 # bring your own document
 @app.route('/byod/<string:content_type>', methods=['GET' , 'POST'])
 def byod(content_type):
+    """
+    Bring Your Own Document.
+    Make use of the Wisdom AI engine on yoru own
+    documents. Upload an image from your gallery, take
+    a picture or supply a webpage.
+    """
     if request.method == "GET":
         print("Hi")
     if request.method == "POST":
         if content_type == "gallery":
             data = request.form.get('image')
+            name = request.form.get('name')
             nparr = np.fromstring(base64.b64decode(data), np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             text = wisdomaiengine.bringyourowndocument(img)
+            save = {"profile_id": login_session["profile_id"],
+                    "content_type": content_type,
+                    "doc_name": name,
+                    "text": text,
+                    "datetime_uploaded": datetime.utcnow()}
+            x = db_byod.insert(data, check_keys=False)
             jsonob = jsonify(img=text)
             return jsonob
         if content_type == "camera":
             return None
         if content_type == "webpage":
             page = request.form.get('data')
+            name = request.form.get('name')
             r = requests.get(page)
             html = r.text
             soup = BeautifulSoup(html, 'html.parser')
@@ -369,6 +399,12 @@ def byod(content_type):
             for m in main_body:
                 text += m.get_text()+" "
             text = text.strip()
+            save = {"profile_id": login_session["profile_id"],
+                    "content_type": content_type,
+                    "doc_name": name,
+                    "text": text,
+                    "datetime_uploaded": datetime.utcnow()}
+            x = db_byod.insert(data, check_keys=False)
             jsonob = jsonify(text=text)
             return jsonob
 
@@ -376,6 +412,11 @@ def byod(content_type):
 # highlighter
 @app.route('/highlight/<string:word>')
 def highlight(word):
+    """
+    Wisdom highlighting insights.
+    When user highlights a word on the Wisdom screen,
+    this route will provide a definition of that word.
+    """
     word = word.strip()
     results = wisdomaiengine.highlighter(word)
     jsonob = jsonify(results=results)
@@ -385,6 +426,11 @@ def highlight(word):
 # bookmark content
 @app.route("bookmark/<string:search_me>/<string:source>/<path:url>")
 def bookmark(search_me, source, url):
+    """
+    Bookmarker.
+    This route is used to save documents to a user
+    profile, so that they can revisit it easily.
+    """
     email = login_session["email"]
     data = {"email": email, "search_term": search_me,
             "source": source, "url": url, 
@@ -397,6 +443,29 @@ def bookmark(search_me, source, url):
 # bookmarks = list(db_bookmarks.find({"email": email}))
 # jsonob = jsonify(bookmarks=bookmarks)
 # return jsonob
+
+
+# profile page
+@app.route('/profile')
+def profile():
+    """
+    Profile page.
+    This route will return all stored information
+    within Wisdom that the user needs when logging
+    into the application.
+    """
+    state = generateState(login_session, 'state')
+    try:
+        first_name = login_session['first_name']
+        email = login_session['email']
+        user = db_users.find_one({"email": email})
+        if user:
+            return "Need to return user's data"
+        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        return jsonify(msg)
+    except KeyError:
+        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        return jsonify(msg)
 
                                                                                     
 # run server
