@@ -86,82 +86,72 @@ def home():
     return render_template("index.html")
 
 # sign up
-@app.route('/signup', methods=['GET', 'POST'])
+@app.route('/signup', methods=['POST'])
 def signup():
     """
     Sign Up page.
     Contains form to sign up as a user on Wisdom platform.
     """
-    if request.method == 'GET':
-        state = generateState(login_session, 'state')
-        msg = {"status" : { "type" : "success" ,   "message" : "Generated state"}}
+    first_name = request.form['first_name']
+    email = request.form['email']
+    password = request.form['password']
+    if name is None or email is None or password is None:
+        msg = {"status" : { "type" : "success" ,   "message" : "Misding fields"}}
         return jsonify(msg)
-    else:
-        first_name = request.form['first_name']
-        email = request.form['email']
-        password = request.form['password']
-        if name is None or email is None or password is None:
-            msg = {"status" : { "type" : "success" ,   "message" : "Misding fields"}}
-            return jsonify(msg)
-        user = db_users.find_one({"email": email})
-        if user:
-            msg = {"status" : { "type" : "success" ,   "message" : "User already exists"}}
-            return jsonify(msg)
-        # hash password
-        hashed_pw = pwd_context.hash(password)
-        data = {"first_name": first_name, "email": email,
-                "password": hashed_pw, "last_updated": datetime.utcnow()}
-        x = db_users.insert(data, check_keys=False)
-        #user.hash_password(password)
-        msg = {"status" : { "type" : "success" ,   "message" : "User created"}}
+    user = db_users.find_one({"email": email})
+    if user:
+        msg = {"status" : { "type" : "success" ,   "message" : "User already exists"}}
         return jsonify(msg)
+    # hash password
+    hashed_pw = pwd_context.hash(password)
+    data = {"first_name": first_name, "email": email,
+            "password": hashed_pw, "last_updated": datetime.utcnow()}
+    x = db_users.insert(data, check_keys=False)
+    #user.hash_password(password)
+    msg = {"status" : { "type" : "success" ,   "message" : "User created"}}
+    return jsonify(msg)
 
 
 # log in
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST'])
 def login():
     """
     Log In page.
     Contains form to log in to an existing users profile.
     """
-    if request.method == 'GET':
-        state = generateState(login_session, 'state')
-        msg = {"status" : { "type" : "success" ,   "message" : "Login page loaded"}}
-        return jsonify(msg)
-    else:
-        # check the state variable for extra security
-        if login_session['state'] != request.args.get('state'):
-            message = "cookie was {0} and request was {1}. Invalid state parameter".format(login_session['state'], request.args.get('state'))
-            response = make_response(json.dumps(message), 401)
-            response.headers['Content-Type'] = 'application/json'
-            return response
-        # check if already logged in with cookie
-        cookie = login_session.get('email')
-        state = login_session['state']
-        if cookie is not None:
-            user = db_users.find_one({"email": cookie})
-            if user:
-                msg = {"status" : { "type" : "success" ,   "message" : "User already logged in"}}
-                return jsonify(msg)
-        # otherwise, log in
-        email = request.form['email']
-        password = request.form['password']
-        user = db_users.find_one({"email": email})
-        if not user:
-            msg = {"status" : { "type" : "success" ,   "message" : "User does not exist, please sign up"}}
+    # check the state variable for extra security
+    if login_session['state'] != request.args.get('state'):
+        message = "cookie was {0} and request was {1}. Invalid state parameter".format(login_session['state'], request.args.get('state'))
+        response = make_response(json.dumps(message), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    # check if already logged in with cookie
+    cookie = login_session.get('email')
+    state = login_session['state']
+    if cookie is not None:
+        user = db_users.find_one({"email": cookie})
+        if user:
+            msg = {"status" : { "type" : "success" ,   "message" : "User already logged in"}}
             return jsonify(msg)
-        stored_pw = user.get("password")
-        if not pwd_context.verify(password, stored_pw):
-            msg = {"status" : { "type" : "success" ,   "message" : "Invalid password, try again"}}
-            return jsonify(msg)
-        first_name = user.get("first_name")
-        profile_id = user.get("_id")
-        # save login details in cookie
-        login_session['first_name'] = first_name
-        login_session['email'] = email
-        login_session['profile_id'] = profile_id
-        msg = {"status" : { "type" : "success" ,   "message" : "Successful login"}}
+    # otherwise, log in
+    email = request.form['email']
+    password = request.form['password']
+    user = db_users.find_one({"email": email})
+    if not user:
+        msg = {"status" : { "type" : "success" ,   "message" : "User does not exist, please sign up"}}
         return jsonify(msg)
+    stored_pw = user.get("password")
+    if not pwd_context.verify(password, stored_pw):
+        msg = {"status" : { "type" : "success" ,   "message" : "Invalid password, try again"}}
+        return jsonify(msg)
+    first_name = user.get("first_name")
+    profile_id = user.get("_id")
+    # save login details in cookie
+    login_session['first_name'] = first_name
+    login_session['email'] = email
+    login_session['profile_id'] = profile_id
+    msg = {"status" : { "type" : "success" ,   "message" : "Successful login"}}
+    return jsonify(msg)
 
 
 # log out
