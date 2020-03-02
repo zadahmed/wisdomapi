@@ -28,6 +28,7 @@ from passlib.apps import custom_app_context as pwd_context
 ##########################
 
 app = Flask(__name__)
+app.secret_key = "super secret key"
 dir = os.path.abspath(os.path.dirname(__file__)) #  Directory
 # user and pwd need to be environment variable os.environ["MONGO_DB_USER"]
 user = "admin"
@@ -85,73 +86,81 @@ def home():
     """
     return render_template("index.html")
 
+
 # sign up
-@app.route('/signup', methods=['POST'])
+@app.route('/signup', methods=['GET', 'POST'])
 def signup():
     """
     Sign Up page.
     Contains form to sign up as a user on Wisdom platform.
     """
-    first_name = request.form['first_name']
-    email = request.form['email']
-    password = request.form['password']
-    if name is None or email is None or password is None:
-        msg = {"status" : { "type" : "success" ,   "message" : "Misding fields"}}
+    if request.method == "GET":
+        print("Hi")
+    else:
+        first_name = request.form['first_name']
+        email = request.form['email']
+        password = request.form['password']
+        print(first_name, email, password)
+        if first_name is None or email is None or password is None:
+            msg = {"status" : { "type" : "success" ,   "message" : "Missing fields"}}
+            return jsonify(msg)
+        user = db_users.find_one({"email": email})
+        if user:
+            msg = {"status" : { "type" : "success" ,   "message" : "User already exists"}}
+            return jsonify(msg)
+        # hash password
+        hashed_pw = pwd_context.hash(password)
+        data = {"first_name": first_name, "email": email,
+                "password": hashed_pw, "last_updated": datetime.utcnow()}
+        x = db_users.insert(data, check_keys=False)
+        #user.hash_password(password)
+        msg = {"status" : { "type" : "success" ,   "message" : "User created"}}
         return jsonify(msg)
-    user = db_users.find_one({"email": email})
-    if user:
-        msg = {"status" : { "type" : "success" ,   "message" : "User already exists"}}
-        return jsonify(msg)
-    # hash password
-    hashed_pw = pwd_context.hash(password)
-    data = {"first_name": first_name, "email": email,
-            "password": hashed_pw, "last_updated": datetime.utcnow()}
-    x = db_users.insert(data, check_keys=False)
-    #user.hash_password(password)
-    msg = {"status" : { "type" : "success" ,   "message" : "User created"}}
-    return jsonify(msg)
 
 
 # log in
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     """
     Log In page.
     Contains form to log in to an existing users profile.
     """
-    # check the state variable for extra security
-    if login_session['state'] != request.args.get('state'):
-        message = "cookie was {0} and request was {1}. Invalid state parameter".format(login_session['state'], request.args.get('state'))
-        response = make_response(json.dumps(message), 401)
-        response.headers['Content-Type'] = 'application/json'
-        return response
-    # check if already logged in with cookie
-    cookie = login_session.get('email')
-    state = login_session['state']
-    if cookie is not None:
-        user = db_users.find_one({"email": cookie})
-        if user:
-            msg = {"status" : { "type" : "success" ,   "message" : "User already logged in"}}
+    if request.method == "GET":
+        print("hi")
+    else:
+        # # check the state variable for extra security
+        # if login_session['state'] != request.args.get('state'):
+        #     message = "cookie was {0} and request was {1}. Invalid state parameter".format(login_session['state'], request.args.get('state'))
+        #     response = make_response(json.dumps(message), 401)
+        #     response.headers['Content-Type'] = 'application/json'
+        #     return response
+        # # check if already logged in with cookie
+        # cookie = login_session.get('email')
+        # state = login_session['state']
+        # if cookie is not None:
+        #     user = db_users.find_one({"email": cookie})
+        #     if user:
+        #         msg = {"status" : { "type" : "success" ,   "message" : "User already logged in"}}
+        #         return jsonify(msg)
+        # otherwise, log in
+        email = request.form['email']
+        password = request.form['password']
+        user = db_users.find_one({"email": email})
+        if not user:
+            msg = {"status" : { "type" : "success" ,   "message" : "User does not exist, please sign up"}}
             return jsonify(msg)
-    # otherwise, log in
-    email = request.form['email']
-    password = request.form['password']
-    user = db_users.find_one({"email": email})
-    if not user:
-        msg = {"status" : { "type" : "success" ,   "message" : "User does not exist, please sign up"}}
+        stored_pw = user.get("password")
+        if not pwd_context.verify(password, stored_pw):
+            msg = {"status" : { "type" : "success" ,   "message" : "Invalid password, try again"}}
+            return jsonify(msg)
+        first_name = user.get("first_name")
+        profile_id = user.get("_id")
+        # save login details in cookie
+        login_session['first_name'] = first_name
+        login_session['email'] = email
+        login_session['profile_id'] = str(profile_id)
+        msg = {"status" : { "type" : "success" ,   "message" : "Successful login"}}
         return jsonify(msg)
-    stored_pw = user.get("password")
-    if not pwd_context.verify(password, stored_pw):
-        msg = {"status" : { "type" : "success" ,   "message" : "Invalid password, try again"}}
-        return jsonify(msg)
-    first_name = user.get("first_name")
-    profile_id = user.get("_id")
-    # save login details in cookie
-    login_session['first_name'] = first_name
-    login_session['email'] = email
-    login_session['profile_id'] = profile_id
-    msg = {"status" : { "type" : "success" ,   "message" : "Successful login"}}
-    return jsonify(msg)
 
 
 # log out
@@ -267,9 +276,9 @@ def search(category, search_me):
         search_id = db_search_terms.insert(data, check_keys=False)
 
     # write data to searches collection
-    data = {"search_id": search_id, "user": login_session["profile_id"],
-            "datetime": datetime.utcnow()}
-    x = db_searches.insert(data, check_keys=False)
+    #data = {"search_id": search_id, "user": login_session["profile_id"],
+    #        "datetime": datetime.utcnow()}
+    #x = db_searches.insert(data, check_keys=False)
 
     # save data to wikipedia collection
     wiki = db_wikipedia.find_one({"search_id": search_id})
@@ -352,13 +361,14 @@ def byod(content_type):
     """
     if request.method == "GET":
         print("Hi")
-    if request.method == "POST":
+    else:
         if content_type == "gallery":
-            data = request.form.get('image')
-            name = request.form.get('name')
+            data = request.form['image']
+            name = request.form['name']
             nparr = np.fromstring(base64.b64decode(data), np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             text = wisdomaiengine.bringyourowndocument(img)
+            print(login_session)
             save = {"profile_id": login_session["profile_id"],
                     "content_type": content_type,
                     "doc_name": name,
@@ -370,8 +380,8 @@ def byod(content_type):
         if content_type == "camera":
             return None
         if content_type == "webpage":
-            page = request.form.get('data')
-            name = request.form.get('name')
+            page = request.form['data']
+            name = request.form['name']
             r = requests.get(page)
             html = r.text
             soup = BeautifulSoup(html, 'html.parser')
@@ -414,7 +424,7 @@ def highlight(word):
 
 
 # bookmark content
-@app.route("bookmark/<string:search_me>/<string:source>/<path:url>")
+@app.route("/bookmark/<string:search_me>/<string:source>/<path:url>")
 def bookmark(search_me, source, url):
     """
     Bookmarker.
@@ -444,13 +454,21 @@ def profile():
     within Wisdom that the user needs when logging
     into the application.
     """
-    state = generateState(login_session, 'state')
+    #state = generateState(login_session, 'state')
     try:
         first_name = login_session['first_name']
         email = login_session['email']
         user = db_users.find_one({"email": email})
         if user:
-            return "Need to return user's data"
+            bookmarks = db_bookmarks.find({"email": email})
+            searches = db_searches.find({"email": email})
+            byod = db_byod.find({"email": email})
+            highlights = db_highlights.find({"email": email})
+            jsonob = jsonify(bookmarks=bookmarks,
+                             searches=searches,
+                             byod=byod,
+                             highlights=highlights)
+            return jsonob
         msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
         return jsonify(msg)
     except KeyError:
