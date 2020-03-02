@@ -11,6 +11,7 @@ import os
 import wisdomaiengine
 from urllib.parse import unquote
 import pymongo
+from bson import ObjectId
 from io import BytesIO
 import sys
 from datetime import datetime
@@ -21,6 +22,7 @@ import cv2
 from dateutil import parser
 import requests
 from passlib.apps import custom_app_context as pwd_context
+from bs4 import BeautifulSoup
 
 
 ##########################
@@ -110,11 +112,14 @@ def signup():
             return jsonify(msg)
         # hash password
         hashed_pw = pwd_context.hash(password)
-        data = {"first_name": first_name, "email": email,
-                "password": hashed_pw, "last_updated": datetime.utcnow()}
-        x = db_users.insert(data, check_keys=False)
+        data = {"first_name": first_name,
+                "email": email,
+                "password": hashed_pw,
+                "last_updated": datetime.utcnow()}
+        search_id = db_users.insert(data, check_keys=False)
         #user.hash_password(password)
-        msg = {"status" : { "type" : "success" ,   "message" : "User created"}}
+        msg = {"id": str(search_id)}
+        print(msg)
         return jsonify(msg)
 
 
@@ -156,10 +161,10 @@ def login():
         first_name = user.get("first_name")
         profile_id = user.get("_id")
         # save login details in cookie
-        login_session['first_name'] = first_name
-        login_session['email'] = email
-        login_session['profile_id'] = str(profile_id)
-        msg = {"status" : { "type" : "success" ,   "message" : "Successful login"}}
+        # login_session['first_name'] = first_name
+        # login_session['email'] = email
+        # login_session['profile_id'] = str(profile_id)
+        msg = {"id": str(profile_id)}
         return jsonify(msg)
 
 
@@ -181,173 +186,190 @@ def logout():
 ########
 
 # search
-@app.route('/search/<string:category>/<string:search_me>', methods=['GET'])
-def search(category, search_me):
+@app.route('/search/<string:category>/<string:search_me>/<string:userid>', methods=['GET'])
+def search(category, search_me, userid):
     """
     Wisdom search.
     User gives a search string and Wisdom finds the definitions,
     associated research papers and a topical word cloud.
     """
-    search_me = search_me.strip()
-    # get wikipedia
-    try:
-        # see if it is saved in db
-        search_term = db_search_terms.find_one({"value": search_me.lower()})
-        if search_term:
-            search_id = search_term.get("_id")
-            wiki = db_wikipedia.find_one({"search_id": search_id})
-            if wiki:
-                wiki_def = wiki.get('wiki_summary')
-        # if not, use mediawiki API
-        else:
-            wiki_def = wisdomaiengine.factualsearch(category, search_me.lower())
-    except:
-        wiki_def = "Oops... couldn't find {}!".format(search_me)
-    research_papers = {}
-    all_papers = []
-    # get arxiv results
-    try:
-        arxiv_results = arxiv.query(query=search_me.lower(), id_list=[],
-                                    max_results=10, start = 0, sort_by="relevance",
-                                    sort_order="descending", prune=False,
-                                    iterative=False, max_chunk_results=10)
-        papers = []
-        for paper in arxiv_results:
-            # title
-            title = paper['title_detail']['value']
-            title = title.replace('\n', '')
-            # abstract summary
-            summary = paper['summary']
-            summary = summary.replace('\n', ' ')
-            # publish date
-            publish_date = str(paper["published"])
-            dt = parser.parse(publish_date)
-            date = str(dt.strftime('%B')) + " " + str(dt.day) + ", " + str(dt.year)
-            # authors
-            authors_list = paper["authors"]
-            authors = ""
-            if len(authors_list) == 1:
-                authors += authors_list[0]
+    if userid:
+        user_id = userid
+        search_me = search_me.strip()
+        # get wikipedia
+        try:
+            # see if it is saved in db
+            search_term = db_search_terms.find_one({"value": search_me.lower()})
+            if search_term:
+                search_id = search_term.get("_id")
+                wiki = db_wikipedia.find_one({"search_id": search_id})
+                if wiki:
+                    wiki_def = wiki.get('wiki_summary')
+            # if not, use mediawiki API
             else:
-                for idx, author in enumerate(authors_list):
-                    if idx == 0:
-                        authors += author+","
-                    elif idx == len(authors_list)-1:
-                        authors += " "+author
-                    else:
-                        authors += " "+author+","
-            # url
-            pdf_url = paper['pdf_url']
-            papers.append([title, summary, date, authors, pdf_url])
-            all_papers.append(summary)
-        research_papers["arxiv"] = papers
-    except:
-        research_papers["arxiv"] = ""
-    # get google scholar results
-    try:
-        google_scholar = wisdomaiengine.getgooglescholar(search_me.lower())
-        research_papers["google scholar"] = google_scholar
-        for paper in google_scholar:
-            all_papers.append(paper[-1])
-    except:
-        research_papers["google scholar"] = ""
-    # get DOAJ articles
-    try:
-        doaj = wisdomaiengine.getdoajarticles(search_me.lower())
-        research_papers["DOAJ"] = doaj
-        for article in doaj:
-            all_papers.append(article[2])
-    except:
-        research_papers["DOAJ"] = ""
-    # get wordcloud of all papers
-    try:
-        all_papers_text = " ".join(a for a in all_papers)
-        wordcloud = wisdomaiengine.wordcloud(search_me, all_papers_text)
-    except:
-        wordcloud = "No topics found!..."
+                wiki_def = wisdomaiengine.factualsearch(category, search_me.lower())
+        except:
+            wiki_def = "Oops... couldn't find {}!".format(search_me)
+        research_papers = {}
+        all_papers = []
+        # get arxiv results
+        try:
+            arxiv_results = arxiv.query(query=search_me.lower(), id_list=[],
+                                        max_results=10, start = 0, sort_by="relevance",
+                                        sort_order="descending", prune=False,
+                                        iterative=False, max_chunk_results=10)
+            papers = []
+            for paper in arxiv_results:
+                # title
+                title = paper['title_detail']['value']
+                title = title.replace('\n', '')
+                # abstract summary
+                summary = paper['summary']
+                summary = summary.replace('\n', ' ')
+                # publish date
+                publish_date = str(paper["published"])
+                dt = parser.parse(publish_date)
+                date = str(dt.strftime('%B')) + " " + str(dt.day) + ", " + str(dt.year)
+                # authors
+                authors_list = paper["authors"]
+                authors = ""
+                if len(authors_list) == 1:
+                    authors += authors_list[0]
+                else:
+                    for idx, author in enumerate(authors_list):
+                        if idx == 0:
+                            authors += author+","
+                        elif idx == len(authors_list)-1:
+                            authors += " "+author
+                        else:
+                            authors += " "+author+","
+                # url
+                pdf_url = paper['pdf_url']
+                papers.append([title, summary, date, authors, pdf_url])
+                all_papers.append(summary)
+            research_papers["arxiv"] = papers
+        except:
+            research_papers["arxiv"] = ""
+        # get google scholar results
+        try:
+            google_scholar = wisdomaiengine.getgooglescholar(search_me.lower())
+            research_papers["google scholar"] = google_scholar
+            for paper in google_scholar:
+                all_papers.append(paper[-1])
+        except:
+            research_papers["google scholar"] = ""
+        # get DOAJ articles
+        try:
+            doaj = wisdomaiengine.getdoajarticles(search_me.lower())
+            research_papers["DOAJ"] = doaj
+            for article in doaj:
+                all_papers.append(article[2])
+        except:
+            research_papers["DOAJ"] = ""
+        # get wordcloud of all papers
+        try:
+            all_papers_text = " ".join(a for a in all_papers)
+            wordcloud = wisdomaiengine.wordcloud(search_me, all_papers_text)
+        except:
+            wordcloud = "No topics found!..."
 
-    # check if search_term has been run before
-    results = db_search_terms.find_one({"value": search_me.lower()})
-    if results:
-        search_id = results.get('_id')
-    else:
-        # write data to search_terms collection
-        data = {"value": search_me.lower()}
-        search_id = db_search_terms.insert(data, check_keys=False)
-
-    # write data to searches collection
-    #data = {"search_id": search_id, "user": login_session["profile_id"],
-    #        "datetime": datetime.utcnow()}
-    #x = db_searches.insert(data, check_keys=False)
-
-    # save data to wikipedia collection
-    wiki = db_wikipedia.find_one({"search_id": search_id})
-    if wiki:
-        # update in db if data is 1 days or older
-        last_updated = datetime.utcnow() - wiki.get("datetime")
-        last_updated_diff = last_updated.days
-        if last_updated_diff > 1:
-            data = {"search_id": search_id, "wiki_summary": wiki_def,
-                    "datetime": datetime.utcnow()}
-            db_wikipedia.update({"search_id": search_id}, {"$set": data})
+        # check if search_term has been run before
+        results = db_search_terms.find_one({"value": search_me.lower()})
+        if results:
+            search_id = results.get('_id')
         else:
-            pass
-    else:
-        data = {"search_id": search_id,
-                "wiki_summary": wiki_def, 
-                "datetime": datetime.utcnow()}
-        x = db_wikipedia.insert(data, check_keys=False)
+            # write data to search_terms collection
+            data = {"value": search_me.lower()}
+            search_id = db_search_terms.insert(data, check_keys=False)
 
-    # return json object
-    jsonob = jsonify(search=search_me,
-                     summary=wiki_def, 
-                     papers=research_papers,
-                     wordcloud=wordcloud)
-    return jsonob
+        # write data to searches collection
+        data = {"search_id": search_id,
+                "user": userid,
+                "datetime": datetime.utcnow()}
+        x = db_searches.insert(data, check_keys=False)
+
+        # save data to wikipedia collection
+        wiki = db_wikipedia.find_one({"search_id": search_id})
+        if wiki:
+            # update in db if data is 1 days or older
+            last_updated = datetime.utcnow() - wiki.get("datetime")
+            last_updated_diff = last_updated.days
+            if last_updated_diff > 1:
+                data = {"search_id": search_id,
+                        "wiki_summary": wiki_def,
+                        "datetime": datetime.utcnow()}
+                db_wikipedia.update({"search_id": search_id}, {"$set": data})
+            else:
+                pass
+        else:
+            data = {"search_id": search_id,
+                    "wiki_summary": wiki_def, 
+                    "datetime": datetime.utcnow()}
+            x = db_wikipedia.insert(data, check_keys=False)
+
+        # return json object
+        jsonob = jsonify(search=search_me,
+                        summary=wiki_def, 
+                        papers=research_papers,
+                        wordcloud=wordcloud)
+        return jsonob
+    else:
+        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        return jsonify(msg)
 
 
 # wisdom engine
-@app.route('/wisdom/<string:search_me>/<string:source>/<path:pdfurl>', methods=['GET'])
-def wisdom(search_me, source, pdfurl):
+@app.route('/wisdom/<string:search_me>/<string:source>/<path:pdfurl>/<string:userid>', methods=["GET"])
+def wisdom(search_me, source, pdfurl, userid):
     """
     Wisdom AI engine.
     This extracts insights from documents and returns key points,
     abstracts, wordclouds and PDF viewer if possible.
     """
-    ### source needs to be name of data source ("arxiv", "google scholar", "doaj")
-    search_me = search_me.strip()
-    # check if pdfurl has been found before
-    pdf = db_summaries.find_one({"url": pdfurl})
-    if pdf:
-        text = pdf.get('text')
-        summary = pdf.get('summary')
-        topics = pdf.get('topics')
-        # update in db if data is 1 days or older
-        last_updated = datetime.utcnow() - pdf.get("last_updated")
-        last_updated_diff = last_updated.days
-        if last_updated_diff > 1:
+    if userid:
+        ### source needs to be name of data source ("arxiv", "google scholar", "doaj")
+        search_me = search_me.strip()
+        # check if pdfurl has been found before
+        pdf = db_summaries.find_one({"url": pdfurl})
+        if pdf:
+            text = pdf.get('text')
+            summary = pdf.get('summary')
+            topics = pdf.get('topics')
+            # update in db if data is 1 days or older
+            last_updated = datetime.utcnow() - pdf.get("last_updated")
+            last_updated_diff = last_updated.days
+            if last_updated_diff > 1:
+                search_term = db_search_terms.find_one({"value": search_me.lower()})
+                search_id = search_term.get("_id")
+                data = {"search_id": search_id,
+                        "url": pdfurl, "source": source, "text": text,
+                        "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
+                db_summaries.update({"url": pdfurl}, {"$set": data})
+            else:
+                pass
+        else:
+            text = wisdomaiengine.pdfdocumentextracter(pdfurl)
+            summary = wisdomaiengine.summarisepdfdocument(text)
+            topics = wisdomaiengine.wordcloud(search_me, text)
+            if topics is None:
+                topics = ['No Topics Found']
+            # write data to arxiv collection
             search_term = db_search_terms.find_one({"value": search_me.lower()})
             search_id = search_term.get("_id")
-            data = {"search_id": search_id, "url": pdfurl, "source": source, "text": text,
-                    "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
-            db_summaries.update({"url": pdfurl}, {"$set": data})
-        else:
-            pass
+            data = {"search_id": search_id,
+                    "url": pdfurl,
+                    "source": source,
+                    "text": text,
+                    "summary": summary,
+                    "topics": topics,
+                    "last_updated": datetime.utcnow()}
+            x = db_summaries.insert(data, check_keys=False)
+        # return json
+        summaryjson = jsonify(wisdomtopics=topics, wisdomsummary=summary)
+        return summaryjson
     else:
-        text = wisdomaiengine.pdfdocumentextracter(pdfurl)
-        summary = wisdomaiengine.summarisepdfdocument(text)
-        topics = wisdomaiengine.wordcloud(search_me, text)
-        if topics is None:
-            topics = ['No Topics Found']
-        # write data to arxiv collection
-        search_term = db_search_terms.find_one({"value": search_me.lower()})
-        search_id = search_term.get("_id")
-        data = {"search_id": search_id, "url": pdfurl, "source": source, "text": text,
-                "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
-        x = db_summaries.insert(data, check_keys=False)
-    # return json
-    summaryjson = jsonify(wisdomtopics=topics, wisdomsummary=summary)
-    return summaryjson
+        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        return jsonify(msg)
 
 
 # bring your own document
@@ -362,80 +384,106 @@ def byod(content_type):
     if request.method == "GET":
         print("Hi")
     else:
-        if content_type == "gallery":
-            data = request.form['image']
-            name = request.form['name']
-            nparr = np.fromstring(base64.b64decode(data), np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            text = wisdomaiengine.bringyourowndocument(img)
-            print(login_session)
-            save = {"profile_id": login_session["profile_id"],
-                    "content_type": content_type,
-                    "doc_name": name,
-                    "text": text,
-                    "datetime_uploaded": datetime.utcnow()}
-            x = db_byod.insert(data, check_keys=False)
-            jsonob = jsonify(img=text)
-            return jsonob
-        if content_type == "camera":
-            return None
-        if content_type == "webpage":
-            page = request.form['data']
-            name = request.form['name']
-            r = requests.get(page)
-            html = r.text
-            soup = BeautifulSoup(html, 'html.parser')
-            #soup = BeautifulSoup(html, 'lxml')
-            body = soup.body
-            # remove footer
-            while body.footer:
-                soup.footer.decompose()
-            # remove scripts
-            while body.script:
-                soup.script.decompose()
-            # get p tags
-            main_body = body.find_all(["p"])
-            text = ""
-            for m in main_body:
-                text += m.get_text()+" "
-            text = text.strip()
-            save = {"profile_id": login_session["profile_id"],
-                    "content_type": content_type,
-                    "doc_name": name,
-                    "text": text,
-                    "datetime_uploaded": datetime.utcnow()}
-            x = db_byod.insert(data, check_keys=False)
-            jsonob = jsonify(text=text)
-            return jsonob
+        user_id = request.form['userid']
+        if user_id:
+            if content_type == "gallery":
+                data = request.form['image']
+                name = request.form['name']
+                nparr = np.fromstring(base64.b64decode(data), np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                text = wisdomaiengine.bringyourowndocument(img)
+                save = {"user": user_id,
+                        "content_type": content_type,
+                        "doc_name": name,
+                        "text": text,
+                        "datetime_uploaded": datetime.utcnow()}
+                x = db_byod.insert(save, check_keys=False)
+                jsonob = jsonify(img=text)
+                return jsonob
+            if content_type == "camera":
+                return None
+            if content_type == "webpage":
+                page = request.form['data']
+                name = request.form['name']
+                r = requests.get(page)
+                html = r.text
+                soup = BeautifulSoup(html, 'html.parser')
+                #soup = BeautifulSoup(html, 'lxml')
+                body = soup.body
+                # remove footer
+                while body.footer:
+                    soup.footer.decompose()
+                # remove scripts
+                while body.script:
+                    soup.script.decompose()
+                # get p tags
+                main_body = body.find_all(["p"])
+                text = ""
+                for m in main_body:
+                    text += m.get_text()+" "
+                text = text.strip()
+                save = {"user": user_id,
+                        "content_type": content_type,
+                        "doc_name": name,
+                        "text": text,
+                        "datetime_uploaded": datetime.utcnow()}
+                x = db_byod.insert(save, check_keys=False)
+                jsonob = jsonify(text=text)
+                return jsonob
+        else:
+            msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+            return jsonify(msg)
 
 
 # highlighter
-@app.route('/highlight/<string:word>')
-def highlight(word):
+@app.route('/highlight/<string:search_me>/<string:word>/<string:userid>', methods=["GET"])
+def highlight(search_me, word, userid):
     """
     Wisdom highlighting insights.
     When user highlights a word on the Wisdom screen,
     this route will provide a definition of that word.
     """
-    word = word.strip()
-    results = wisdomaiengine.highlighter(word)
-    jsonob = jsonify(results=results)
-    return jsonob
+    if userid:
+        word = word.strip()
+        results = wisdomaiengine.highlighter(word)
+        search_term = db_search_terms.find_one({"value": search_me.lower()})
+        search_id = search_term.get("_id")
+        data = {"user": userid,
+                "search_id": search_id,
+                "highlighted_word": word,
+                "results": results,
+                "date_saved": datetime.utcnow()}
+        x = db_highlights.insert(data, check_keys=False)
+        jsonob = jsonify(results=results)
+        return jsonob
+    else:
+        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        return jsonify(msg)
 
 
 # bookmark content
-@app.route("/bookmark/<string:search_me>/<string:source>/<path:url>")
+@app.route("/bookmark/<string:search_me>/<string:source>/<path:url>", methods=["POST"])
 def bookmark(search_me, source, url):
     """
     Bookmarker.
     This route is used to save documents to a user
     profile, so that they can revisit it easily.
     """
-    email = login_session["email"]
-    data = {"email": email, "search_term": search_me,
-            "source": source, "url": url, 
-            "date_saved": datetime.utcnow()}
-    x = db_bookmarks.insert(data, check_keys=False)
+    user_id = request.form['userid']
+    if user_id:
+        search_term = db_search_terms.find_one({"value": search_me.lower()})
+        search_id = search_term.get("_id")
+        data = {"user": user_id,
+                "search_id": search_id,
+                "source": source,
+                "url": url, 
+                "date_saved": datetime.utcnow()}
+        x = db_bookmarks.insert(data, check_keys=False)
+        msg = {"status" : { "type" : "success" ,   "message" : "Bookmark created"}}
+        return jsonify(msg)
+    else:
+        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        return jsonify(msg)
 
 
 ### Need a profile route to return all their bookmarks and previous searches...
@@ -446,33 +494,31 @@ def bookmark(search_me, source, url):
 
 
 # profile page
-@app.route('/profile')
-def profile():
+@app.route('/profile/<string:userid>', methods=["GET"])
+def profile(userid):
     """
     Profile page.
     This route will return all stored information
     within Wisdom that the user needs when logging
     into the application.
     """
-    #state = generateState(login_session, 'state')
-    try:
-        first_name = login_session['first_name']
-        email = login_session['email']
-        user = db_users.find_one({"email": email})
-        if user:
-            bookmarks = db_bookmarks.find({"email": email})
-            searches = db_searches.find({"email": email})
-            byod = db_byod.find({"email": email})
-            highlights = db_highlights.find({"email": email})
-            jsonob = jsonify(bookmarks=bookmarks,
-                             searches=searches,
-                             byod=byod,
-                             highlights=highlights)
-            return jsonob
-        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
-        return jsonify(msg)
-    except KeyError:
-        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+    if userid:
+        #first_name = login_session['first_name']
+        bookmarks = db_bookmarks.find({"user": userid})
+        bookmarks = [{"search_id": str(b["search_id"]), "source": b["source"], "url": b["url"], "date_saved": b["date_saved"]} for b in bookmarks]
+        searches = db_searches.find({"user": userid})
+        searches = [{"search_id": str(s["search_id"]), "datetime": s["datetime"]} for s in searches]
+        byod = db_byod.find({"user": userid})
+        byod = [{"content_type": b["content_type"], "doc_name": b["doc_name"], "text": b["name"], "datetime_uploaded": b["datetime_uploaded"]} for b in byod]
+        highlights = db_highlights.find({"user": userid})
+        highlights = [{"search_id": str(h["search_id"]), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"]} for h in highlights]
+        jsonob = jsonify(bookmarks=bookmarks,
+                         searches=searches,
+                         byod=byod,
+                         highlights=highlights)
+        return jsonob
+    else:
+        msg = {"status": {"type": "success", "message": "Please log in"}}
         return jsonify(msg)
 
                                                                                     
