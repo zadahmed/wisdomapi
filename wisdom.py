@@ -203,7 +203,6 @@ def search(category, search_me, userid):
                 wiki = db_wikipedia.find_one({"search_id": search_id})
                 if wiki:
                     wiki_def = wiki.get('wiki_summary')
-            # if not, use mediawiki API
             else:
                 wiki_def = wisdomaiengine.factualsearch(category, search_me.lower())
         except:
@@ -240,22 +239,18 @@ def search(category, search_me, userid):
             wordcloud = wisdomaiengine.wordcloud(search_me, all_papers_text)
         except:
             wordcloud = "No topics found!..."
-
         # check if search_term has been run before
         results = db_search_terms.find_one({"value": search_me.lower()})
         if results:
             search_id = results.get('_id')
         else:
-            # write data to search_terms collection
             data = {"value": search_me.lower()}
             search_id = db_search_terms.insert(data, check_keys=False)
-
         # write data to searches collection
         data = {"search_id": search_id,
                 "user": userid,
                 "datetime": datetime.utcnow()}
         x = db_searches.insert(data, check_keys=False)
-
         # save data to wikipedia collection
         wiki = db_wikipedia.find_one({"search_id": search_id})
         if wiki:
@@ -274,7 +269,6 @@ def search(category, search_me, userid):
                     "wiki_summary": wiki_def, 
                     "datetime": datetime.utcnow()}
             x = db_wikipedia.insert(data, check_keys=False)
-
         # return json object
         jsonob = jsonify(search=search_me,
                         summary=wiki_def, 
