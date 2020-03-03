@@ -30,6 +30,8 @@ from mediawiki import MediaWiki
 from pysummarization.nlpbase.auto_abstractor import AutoAbstractor
 from pysummarization.tokenizabledoc.simple_tokenizer import SimpleTokenizer
 from pysummarization.abstractabledoc.top_n_rank_abstractor import TopNRankAbstractor
+import arxiv
+from dateutil import parser
 
 
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
@@ -839,6 +841,65 @@ def bringyourowndocument(img):
         # return "Error with extracting text... try another one"
 
 
+def getarxivresults(search_term, quantity=10):
+    """
+    Get search page results for documents on ArXiv
+    ------------------
+    Return top N results from ArXiv based on search term
+    
+    INPUT:
+    - search_term (string): topic being searched.
+    - quantity (int), optional: number of documents to return
+    
+    OUTPUT:
+    - papers (list):
+        - titles (list): titles of papers
+        - summary (list): abstract of document
+        - date (string): formatted date
+        - authors (string): formatted authors string
+        - pdf_url (string): link to PDF of document
+    
+    """
+    arxiv_results = arxiv.query(query=search_term,
+                                id_list=[],
+                                max_results=quantity,
+                                start=0,
+                                sort_by="relevance",
+                                sort_order="descending",
+                                prune=False,
+                                iterative=False,
+                                max_chunk_results=10)
+    papers = []
+    for paper in arxiv_results:
+        # title
+        title = paper['title_detail']['value']
+        title = title.replace('\n', '')
+        # abstract summary
+        summary = paper['summary']
+        summary = summary.replace('\n', ' ')
+        # publish date
+        publish_date = str(paper["published"])
+        dt = parser.parse(publish_date)
+        date = str(dt.strftime('%B')) + " " + str(dt.day) + ", " + str(dt.year)
+        # authors
+        authors_list = paper["authors"]
+        authors = ""
+        if len(authors_list) == 1:
+            authors += authors_list[0]
+        else:
+            for idx, author in enumerate(authors_list):
+                if idx == 0:
+                    authors += author+","
+                elif idx == len(authors_list)-1:
+                    authors += " "+author
+                else:
+                    authors += " "+author+","
+        # url
+        pdf_url = paper['pdf_url']
+        papers.append([title, summary, date, authors, pdf_url])
+    return papers
+
+
 def getgooglescholar(search_term, quantity=10):
     """
     Get search page results for docuements on Google Scholar
@@ -879,7 +940,11 @@ def getgooglescholar(search_term, quantity=10):
                     data.append("")
                 # author
                 try:
-                    data.append(result.bib['author'])
+                    authors = result.bib["author"]
+                    if " and " in authors:
+                        all_authors = authors.split(" and ")
+                        authors = ", ".join(a for a in all_authors)
+                    data.append(authors)
                 except:
                     data.append("")
                 # cited_by
@@ -1137,7 +1202,8 @@ def getdoajarticles(search_term, quantity=10):
                     for author in doc["bibjson"]["author"]:
                         authors.append(author["name"])
                         affiliations.append(author["affiliation"])
-                    info.append(list(set(authors)))
+                    author_string = ", ".join(a for a in list(set(authors)))
+                    info.append(author_string)
                     info.append(list(set(affiliations)))
                 else:
                     info.append("")
@@ -1149,7 +1215,10 @@ def getdoajarticles(search_term, quantity=10):
                     info.append("")
                 # date created
                 if "created_date" in doc:
-                    info.append(doc["created_date"])
+                    publish_date = str(doc["created_date"])
+                    dt = parser.parse(publish_date)
+                    date = str(dt.strftime('%B')) + " " + str(dt.day) + ", " + str(dt.year)
+                    info.append(date)
                 else:
                     info.append("")
                 # add to articles list

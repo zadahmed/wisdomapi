@@ -4,7 +4,6 @@
 
 
 import wptools
-import arxiv
 from flask import Flask, request, jsonify, render_template
 from flask import session as login_session
 import os
@@ -19,7 +18,6 @@ import base64
 from PIL import Image
 import numpy as np
 import cv2
-from dateutil import parser
 import requests
 from passlib.apps import custom_app_context as pwd_context
 from bs4 import BeautifulSoup
@@ -214,39 +212,9 @@ def search(category, search_me, userid):
         all_papers = []
         # get arxiv results
         try:
-            arxiv_results = arxiv.query(query=search_me.lower(), id_list=[],
-                                        max_results=10, start = 0, sort_by="relevance",
-                                        sort_order="descending", prune=False,
-                                        iterative=False, max_chunk_results=10)
-            papers = []
-            for paper in arxiv_results:
-                # title
-                title = paper['title_detail']['value']
-                title = title.replace('\n', '')
-                # abstract summary
-                summary = paper['summary']
-                summary = summary.replace('\n', ' ')
-                # publish date
-                publish_date = str(paper["published"])
-                dt = parser.parse(publish_date)
-                date = str(dt.strftime('%B')) + " " + str(dt.day) + ", " + str(dt.year)
-                # authors
-                authors_list = paper["authors"]
-                authors = ""
-                if len(authors_list) == 1:
-                    authors += authors_list[0]
-                else:
-                    for idx, author in enumerate(authors_list):
-                        if idx == 0:
-                            authors += author+","
-                        elif idx == len(authors_list)-1:
-                            authors += " "+author
-                        else:
-                            authors += " "+author+","
-                # url
-                pdf_url = paper['pdf_url']
-                papers.append([title, summary, date, authors, pdf_url])
-                all_papers.append(summary)
+            papers = wisdomaiengine.getarxivresults(search_me.lower())
+            for paper in papers:
+                all_papers.append(paper[1])
             research_papers["arxiv"] = papers
         except:
             research_papers["arxiv"] = ""
