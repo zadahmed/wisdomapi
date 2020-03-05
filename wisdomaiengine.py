@@ -99,6 +99,56 @@ def frequency_processor(corpus):
     frequency['tf_idf'] = frequency['frequency'] * frequency['idf']
     return frequency
 
+def summarisetext(text, key_points=5, complexity=5):
+    # check if text exists
+    if text:
+        # Summarisation of top 5 key points
+        sentence_length = complexity*30
+        summary = []
+        blob = TextBlob(text)
+        sentences = [str(sentence) for sentence in blob.sentences]
+        summary_dummy = []
+        # clean up sentences
+        for sent in sentences:
+            try:
+                if "•" in sent and ":" in sent:
+                    sentence = re.sub("•", "", sent)
+                    summary_dummy.append(sentence)
+                elif "•" in sent[:3]:
+                    sentence = re.sub("•", ".", sent)
+                    summary_dummy.append(sentence)
+                else:
+                    summary_dummy.append(sent)
+            except:
+                pass
+        # a bit more cleaning
+        sentences = summary_dummy
+        for sentence in sentences:
+            try:
+                if sentence.find(":", 0, 1) != -1 and sentence.find("-", 1, 3) != -1:
+                    pass
+                else:
+                    if len(sentence)>2:
+                        if len(sentence.split()) < sentence_length:
+                            summary.append(sentence)
+            except:
+                pass
+        # identify key points
+        parser = PlaintextParser.from_string(' '.join(str(sentence) for sentence in summary), Tokenizer("english"))
+        summarizer = TextRankSummarizer()
+        doc_summary = summarizer(parser.document, key_points)
+        doc_summary = [str(sentence) for sentence in doc_summary]
+        summary = []
+        for sent in doc_summary:
+            try:
+                summary.append("• "+sent)
+            except:
+                pass
+        doc_summary = summary
+    else:
+        doc_summary = None
+    return doc_summary
+
 # Convolution kernels for OCR
 def get_grayscale(image):
     return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -1067,9 +1117,12 @@ def factualsearch(category, search_me):
     # get wikipedia summaries
     if final_pages:
         # get results
-        results = {}
+        results = []
         for page in final_pages:
-            results[page] = [wikipedia.page(page).summary]
+            text = wikipedia.page(page).summary
+            key_points = summarisetext(text)
+            summary = "\n\n".join(k for k in key_points)
+            results.append([page, text, summary])
         return results
     else:
         results = "Couldn't find it... try one of these: "
@@ -1177,22 +1230,32 @@ def getdoajarticles(search_term, quantity=10):
                 info = []
                 # journal name
                 if "journal" in doc["bibjson"]:
-                    info.append(doc["bibjson"]["journal"]["title"])
+                    text = doc["bibjson"]["journal"]["title"]
+                    clean_text = BeautifulSoup(text, "html.parser").text
+                    info.append(clean_text)
                 else:
                     info.append("")
                 # article title
                 if "title" in doc["bibjson"]:
-                    info.append(doc["bibjson"]["title"])
+                    text = doc["bibjson"]["title"]
+                    clean_text = BeautifulSoup(text, "html.parser").text
+                    info.append(clean_text)
                 else:
                     info.append("")
                 # abstract
                 if "abstract" in doc["bibjson"]:
-                    info.append(doc["bibjson"]["abstract"])
+                    text = doc["bibjson"]["abstract"]
+                    #cleaner = re.compile('<.*?>')
+                    #clean_text = re.sub(cleaner, '', text)
+                    clean_text = BeautifulSoup(text, "html.parser").text
+                    info.append(clean_text)
                 else:
                     info.append("")
                 # keywords
                 if "keywords" in doc["bibjson"]:
-                    info.append(doc["bibjson"]["keywords"])
+                    text = doc["bibjson"]["keywords"]
+                    clean_text = BeautifulSoup(text, "html.parser").text
+                    info.append(clean_text)
                 else:
                     info.append("")
                 # author
@@ -1230,6 +1293,7 @@ def getdoajarticles(search_term, quantity=10):
     except:
         return "Unable to collect DOAJ articles..."
         
-        
-        
+
+
+  
             

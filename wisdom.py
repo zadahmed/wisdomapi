@@ -51,6 +51,7 @@ try:
     db_highlights = db["highlights"]
     db_wikipedia = db["wikipedia"]
     db_summaries = db["summaries"]
+    db_is_loggedin = db["is_loggedin"]
 except:
     print("Unable to connect to collections")
     sys.exit(1)
@@ -115,6 +116,10 @@ def signup():
                 "password": hashed_pw,
                 "last_updated": datetime.utcnow()}
         search_id = db_users.insert(data, check_keys=False)
+        # create user in logged in table
+        data = {"user": str(search_id),
+                "is_loggedin": False}
+        is_loggedin = db_is_loggedin.insert(data, check_keys=False)
         #user.hash_password(password)
         msg = {"id": str(search_id)}
         print(msg)
@@ -162,34 +167,82 @@ def login():
         # login_session['first_name'] = first_name
         # login_session['email'] = email
         # login_session['profile_id'] = str(profile_id)
-        msg = {"id": str(profile_id)}
-        return jsonify(msg)
+        # set is_loggedin = True
+        is_loggedin = db_is_loggedin.find_one({"user": str(profile_id)})
+        if is_loggedin:
+            if is_loggedin.get("is_loggedin") == False:
+                data = {"is_loggedin": True}
+                db_is_loggedin.update({"user": str(profile_id)}, {"$set": data})
+                msg = {"id": str(profile_id)}
+                return jsonify(msg)
+            else:
+                msg = {"status" : { "type" : "success" ,   "message" : "Already logged in"}}
+                return jsonify(msg)
+        else:
+            msg = {"status" : { "type" : "success" ,   "message" : "User not found, please sign up"}}
+            return jsonify(msg)
 
 
 # log out
-@app.route('/logout')
-def logout():
+@app.route('/logout/<string:userid>')
+def logout(userid):
     """
     Log Out route.
     Log the user out of their Wisdom account and clear the
     session cookie stored.
     """
-    login_session.clear()
-    msg = {"status" : { "type" : "success" ,   "message" : "Logged out, bye"}}
-    return jsonify(msg)
+    if userid:
+        is_loggedin = db_is_loggedin.find_one({"user": str(userid)})
+        if is_loggedin:
+            if is_loggedin.get("is_loggedin") == True:
+                data = {"is_loggedin": False}
+                db_is_loggedin.update({"user": str(userid)}, {"$set": data})
+                msg = {"status" : { "type" : "success" ,   "message" : "Logged out"}}
+                return jsonify(msg)
+            else:
+                msg = {"status" : { "type" : "success" ,   "message" : "Already logged out"}}
+                return jsonify(msg)
+        else:
+            return msg = {"status" : { "type" : "success" ,   "message" : "User not found, sign up"}}
+                return jsonify(msg)
+    else:
+        msg = {"status" : { "type" : "success" ,   "message" : "Provide userid"}}
+        return jsonify(msg)
 
 
 ########
 # APIs #
 ########
 
-# search
-@app.route('/search/<string:category>/<string:search_me>/<string:userid>', methods=['GET'])
-def search(category, search_me, userid):
+# log out
+@app.route('/logincheck/<string:userid>')
+def logincheck(userid):
     """
-    Wisdom search.
-    User gives a search string and Wisdom finds the definitions,
-    associated research papers and a topical word cloud.
+    Check whether user is logged in.
+    """
+    if userid:
+        is_loggedin = db_is_loggedin.find_one({"user": str(userid)})
+        if is_loggedin:
+            if is_loggedin.get("is_loggedin") == True:
+                msg = {str(userid)}
+                return jsonify(msg)
+            else:
+                msg = {"status" : { "type" : "success" ,   "message" : "User is logged out"}}
+                return jsonify(msg)
+        else:
+            return msg = {"status" : { "type" : "success" ,   "message" : "User not found, sign up"}}
+                return jsonify(msg)
+    else:
+        msg = {"status" : { "type" : "success" ,   "message" : "Provide userid"}}
+        return jsonify(msg)
+
+
+# factual
+@app.route('/definition/<string:category>/<string:search_me>/<string:userid>', methods=['GET'])
+def definitionsearch(category, search_me, userid):
+    """
+    Factual search.
+    Returns factual definitions of the search term.
     """
     if userid:
         user_id = userid
@@ -203,10 +256,64 @@ def search(category, search_me, userid):
                 wiki = db_wikipedia.find_one({"search_id": search_id})
                 if wiki:
                     wiki_def = wiki.get('wiki_summary')
+            # else use wikipedia API
             else:
                 wiki_def = wisdomaiengine.factualsearch(category, search_me.lower())
         except:
             wiki_def = "Oops... couldn't find {}!".format(search_me)
+        # check if search_term has been run before
+        results = db_search_terms.find_one({"value": search_me.lower()})
+        if results:
+            search_id = results.get('_id')
+        else:
+            data = {"value": search_me.lower()}
+            search_id = db_search_terms.insert(data, check_keys=False)
+        # write data to searches collection
+        data = {"search_id": search_id,
+                "user": userid,
+                "datetime": datetime.utcnow()}
+        x = db_searches.insert(data, check_keys=False)
+        # save data to wikipedia collection
+        wiki = db_wikipedia.find_one({"search_id": search_id})
+        if wiki:
+            if wiki.get("wiki_summary") != wiki_def:
+                data = {"search_id": search_id,
+                        "wiki_summary": wiki_def,
+                        "datetime": datetime.utcnow()}
+                db_wikipedia.update({"search_id": search_id}, {"$set": data})
+                # last_updated = datetime.utcnow() - wiki.get("datetime")
+                # last_updated_diff = last_updated.days
+                # if last_updated_diff > 1:
+                #     data = {"search_id": search_id,
+                #             "wiki_summary": wiki_def,
+                #             "datetime": datetime.utcnow()}
+                #     db_wikipedia.update({"search_id": search_id}, {"$set": data})
+                # else:
+                #     pass
+        else:
+            data = {"search_id": search_id,
+                    "wiki_summary": wiki_def, 
+                    "datetime": datetime.utcnow()}
+            x = db_wikipedia.insert(data, check_keys=False)
+        # return json
+        jsonob = jsonify(search=search_me,
+                         factual=wiki_def)
+        return jsonob
+    else:
+        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        return jsonify(msg)
+
+    
+# research papers
+@app.route('/research/<string:category>/<string:search_me>/<string:userid>', methods=['GET'])
+def papersearch(category, search_me, userid):
+    """
+    Research paper search.
+    Returns research papers of the search term.
+    """
+    if userid:
+        user_id = userid
+        search_me = search_me.strip()
         research_papers = {}
         all_papers = []
         # get arxiv results
@@ -239,41 +346,9 @@ def search(category, search_me, userid):
             wordcloud = wisdomaiengine.wordcloud(search_me, all_papers_text)
         except:
             wordcloud = "No topics found!..."
-        # check if search_term has been run before
-        results = db_search_terms.find_one({"value": search_me.lower()})
-        if results:
-            search_id = results.get('_id')
-        else:
-            data = {"value": search_me.lower()}
-            search_id = db_search_terms.insert(data, check_keys=False)
-        # write data to searches collection
-        data = {"search_id": search_id,
-                "user": userid,
-                "datetime": datetime.utcnow()}
-        x = db_searches.insert(data, check_keys=False)
-        # save data to wikipedia collection
-        wiki = db_wikipedia.find_one({"search_id": search_id})
-        if wiki:
-            # update in db if data is 1 days or older
-            last_updated = datetime.utcnow() - wiki.get("datetime")
-            last_updated_diff = last_updated.days
-            if last_updated_diff > 1:
-                data = {"search_id": search_id,
-                        "wiki_summary": wiki_def,
-                        "datetime": datetime.utcnow()}
-                db_wikipedia.update({"search_id": search_id}, {"$set": data})
-            else:
-                pass
-        else:
-            data = {"search_id": search_id,
-                    "wiki_summary": wiki_def, 
-                    "datetime": datetime.utcnow()}
-            x = db_wikipedia.insert(data, check_keys=False)
         # return json object
-        jsonob = jsonify(search=search_me,
-                        summary=wiki_def, 
-                        papers=research_papers,
-                        wordcloud=wordcloud)
+        jsonob = jsonify(papers=research_papers,
+                         wordcloud=wordcloud)
         return jsonob
     else:
         msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
@@ -471,7 +546,7 @@ def profile(userid):
         searches = db_searches.find({"user": userid})
         searches = [{"search_id": str(s["search_id"]), "datetime": s["datetime"]} for s in searches]
         byod = db_byod.find({"user": userid})
-        byod = [{"content_type": b["content_type"], "doc_name": b["doc_name"], "text": b["name"], "datetime_uploaded": b["datetime_uploaded"]} for b in byod]
+        byod = [{"content_type": b["content_type"], "doc_name": b["doc_name"], "text": b["text"], "datetime_uploaded": b["datetime_uploaded"]} for b in byod]
         highlights = db_highlights.find({"user": userid})
         highlights = [{"search_id": str(h["search_id"]), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"]} for h in highlights]
         jsonob = jsonify(bookmarks=bookmarks,
