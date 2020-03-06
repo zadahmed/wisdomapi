@@ -11,6 +11,7 @@ import wisdomaiengine
 from urllib.parse import unquote
 import pymongo
 from bson import ObjectId
+from bson.son import SON
 from io import BytesIO
 import sys
 from datetime import datetime
@@ -203,8 +204,8 @@ def logout(userid):
                 msg = {"status" : { "type" : "success" ,   "message" : "Already logged out"}}
                 return jsonify(msg)
         else:
-            return msg = {"status" : { "type" : "success" ,   "message" : "User not found, sign up"}}
-                return jsonify(msg)
+            msg = {"status" : { "type" : "success" ,   "message" : "User not found, sign up"}}
+            return jsonify(msg)
     else:
         msg = {"status" : { "type" : "success" ,   "message" : "Provide userid"}}
         return jsonify(msg)
@@ -230,8 +231,8 @@ def logincheck(userid):
                 msg = {"status" : { "type" : "success" ,   "message" : "User is logged out"}}
                 return jsonify(msg)
         else:
-            return msg = {"status" : { "type" : "success" ,   "message" : "User not found, sign up"}}
-                return jsonify(msg)
+            msg = {"status" : { "type" : "success" ,   "message" : "User not found, sign up"}}
+            return jsonify(msg)
     else:
         msg = {"status" : { "type" : "success" ,   "message" : "Provide userid"}}
         return jsonify(msg)
@@ -542,17 +543,34 @@ def profile(userid):
     if userid:
         #first_name = login_session['first_name']
         bookmarks = db_bookmarks.find({"user": userid})
-        bookmarks = [{"search_id": str(b["search_id"]), "source": b["source"], "url": b["url"], "date_saved": b["date_saved"]} for b in bookmarks]
+        bookmarks = [{"search_term": db_search_terms.find_one({"_id": b["search_id"]}).get("value"), "source": b["source"], "url": b["url"], "date_saved": b["date_saved"]} for b in bookmarks]
         searches = db_searches.find({"user": userid})
-        searches = [{"search_id": str(s["search_id"]), "datetime": s["datetime"]} for s in searches]
+        searches = [{"search_term": db_search_terms.find_one({"_id": s["search_id"]}).get("value"), "datetime": s["datetime"]} for s in searches]
         byod = db_byod.find({"user": userid})
         byod = [{"content_type": b["content_type"], "doc_name": b["doc_name"], "text": b["text"], "datetime_uploaded": b["datetime_uploaded"]} for b in byod]
         highlights = db_highlights.find({"user": userid})
-        highlights = [{"search_id": str(h["search_id"]), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"]} for h in highlights]
+        highlights = [{"search_term": db_search_terms.find_one({"_id": h["search_id"]}).get("value"), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"]} for h in highlights]
         jsonob = jsonify(bookmarks=bookmarks,
                          searches=searches,
                          byod=byod,
                          highlights=highlights)
+        # top 10 searches in community
+        agg = db_searches.find()
+        #group = agg.aggregate({"$group": {"count": {"$count": "$_search_id"}}})
+        for a in agg:
+            print(a)
+
+        # pipeline = [
+        #             {"$unwind": "$search_id"},
+        #             {"$group": {"_id": "$search_id", "count": {"$sum": 1}}}
+        #             #{"$sort": SON([("count", -1), ("_id", -1)])}
+        #             ]
+        # # pipeline = [{"$group" : {"_id" : "$search_id", "_id" : {"$count" : "$_id"}}}]
+        # agg = db_searches.aggregate(pipeline)
+        # result = list(agg)
+        # for i in result:
+        #     print(i["sum"])
+        # print(result)
         return jsonob
     else:
         msg = {"status": {"type": "success", "message": "Please log in"}}
