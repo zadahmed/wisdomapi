@@ -12,6 +12,7 @@ from urllib.parse import unquote
 import pymongo
 from bson import ObjectId
 from bson.son import SON
+from bson.code import Code
 from io import BytesIO
 import sys
 from datetime import datetime
@@ -22,6 +23,8 @@ import cv2
 import requests
 from passlib.apps import custom_app_context as pwd_context
 from bs4 import BeautifulSoup
+from collections import Counter
+import pandas as pd
 
 
 ##########################
@@ -550,27 +553,30 @@ def profile(userid):
         byod = [{"content_type": b["content_type"], "doc_name": b["doc_name"], "text": b["text"], "datetime_uploaded": b["datetime_uploaded"]} for b in byod]
         highlights = db_highlights.find({"user": userid})
         highlights = [{"search_term": db_search_terms.find_one({"_id": h["search_id"]}).get("value"), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"]} for h in highlights]
+        # top 10 searches in community
+        # agg = db_searches.aggregate([
+        #             {"$group": {"_id": "$search_id",
+        #                         "count": {"$sum": 1}
+        #                         }
+        #             }])
+        agg = [s["search_id"] for s in db_searches.find()]
+        table = pd.DataFrame()
+        table["searches"] = Counter(agg).keys()
+        table["count"] = Counter(agg).values()
+        table = table.sort_values("count", ascending=False)
+        table = table[:10]
+        search_ids = table["searches"].values
+        counts = table["count"].values
+        n = 0
+        top_n = []
+        while n < len(search_ids):
+            top_n.append([str(db_search_terms.find_one({"_id": search_ids[n]}).get("value")), str(counts[n])])
+            n += 1
         jsonob = jsonify(bookmarks=bookmarks,
                          searches=searches,
                          byod=byod,
-                         highlights=highlights)
-        # top 10 searches in community
-        agg = db_searches.find()
-        #group = agg.aggregate({"$group": {"count": {"$count": "$_search_id"}}})
-        for a in agg:
-            print(a)
-
-        # pipeline = [
-        #             {"$unwind": "$search_id"},
-        #             {"$group": {"_id": "$search_id", "count": {"$sum": 1}}}
-        #             #{"$sort": SON([("count", -1), ("_id", -1)])}
-        #             ]
-        # # pipeline = [{"$group" : {"_id" : "$search_id", "_id" : {"$count" : "$_id"}}}]
-        # agg = db_searches.aggregate(pipeline)
-        # result = list(agg)
-        # for i in result:
-        #     print(i["sum"])
-        # print(result)
+                         highlights=highlights,
+                         top_n=top_n)
         return jsonob
     else:
         msg = {"status": {"type": "success", "message": "Please log in"}}
