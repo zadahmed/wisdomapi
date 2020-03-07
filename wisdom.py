@@ -546,7 +546,7 @@ def profile(userid):
     if userid:
         #first_name = login_session['first_name']
         bookmarks = db_bookmarks.find({"user": userid})
-        bookmarks = [{"search_term": db_search_terms.find_one({"_id": b["search_id"]}).get("value"), "source": b["source"], "url": b["url"], "date_saved": b["date_saved"]} for b in bookmarks]
+        bookmarks = [{"search_term": db_search_terms.find_one({"_id": b["search_id"]}).get("value"), "source": b["source"], "url": b["url"], "date_saved": str(b["date_saved"]).strftime("%B %d, %Y")} for b in bookmarks]
         searches = db_searches.find({"user": userid})
         searches = [{"search_term": db_search_terms.find_one({"_id": s["search_id"]}).get("value"), "datetime": s["datetime"]} for s in searches]
         byod = db_byod.find({"user": userid})
