@@ -546,13 +546,13 @@ def profile(userid):
     if userid:
         #first_name = login_session['first_name']
         bookmarks = db_bookmarks.find({"user": userid})
-        bookmarks = [{"search_term": db_search_terms.find_one({"_id": b["search_id"]}).get("value"), "source": b["source"], "url": b["url"], "date_saved": str(b["date_saved"]).strftime("%B %d, %Y")} for b in bookmarks]
+        bookmarks = [{"search_term": db_search_terms.find_one({"_id": b["search_id"]}).get("value"), "source": b["source"], "url": b["url"], "date_saved": b["date_saved"].strftime("%H:%M %B %d, %Y")} for b in bookmarks]
         searches = db_searches.find({"user": userid})
-        searches = [{"search_term": db_search_terms.find_one({"_id": s["search_id"]}).get("value"), "datetime": s["datetime"]} for s in searches]
+        searches = [{"search_term": db_search_terms.find_one({"_id": s["search_id"]}).get("value"), "datetime": s["datetime"].strftime("%H:%M %B %d, %Y")} for s in searches]
         byod = db_byod.find({"user": userid})
-        byod = [{"content_type": b["content_type"], "doc_name": b["doc_name"], "text": b["text"], "datetime_uploaded": b["datetime_uploaded"]} for b in byod]
+        byod = [{"content_type": b["content_type"], "doc_name": b["doc_name"], "text": b["text"], "datetime_uploaded": b["datetime_uploaded"].strftime("%H:%M %B %d, %Y")} for b in byod]
         highlights = db_highlights.find({"user": userid})
-        highlights = [{"search_term": db_search_terms.find_one({"_id": h["search_id"]}).get("value"), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"]} for h in highlights]
+        highlights = [{"search_term": db_search_terms.find_one({"_id": h["search_id"]}).get("value"), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"].strftime("%H:%M %B %d, %Y")} for h in highlights]
         # top 10 searches in community
         # agg = db_searches.aggregate([
         #             {"$group": {"_id": "$search_id",
