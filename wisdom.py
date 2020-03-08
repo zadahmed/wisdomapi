@@ -2,7 +2,6 @@
 # IMPORTS #
 ###########
 
-
 import wptools
 from flask import Flask, request, jsonify, render_template
 from flask import session as login_session
@@ -65,18 +64,6 @@ except:
 # FUNCTIONS #
 #############
 
-# Function used for generate state
-def generateState(sess, key):
-    """
-    Generate state used for application cookie.
-    Creates a random string of numbers and letters to encrypt the
-    users session for use within a cookie.
-    """
-    state = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(32))
-    sess[key] = state
-    return state
-
-
 ##########
 # ROUTES #
 ##########
@@ -105,7 +92,6 @@ def signup():
         first_name = request.form['first_name']
         email = request.form['email']
         password = request.form['password']
-        print(first_name, email, password)
         if first_name is None or email is None or password is None:
             msg = {"status" : { "type" : "success" ,   "message" : "Missing fields"}}
             return jsonify(msg)
@@ -140,38 +126,22 @@ def login():
     if request.method == "GET":
         print("hi")
     else:
-        # # check the state variable for extra security
-        # if login_session['state'] != request.args.get('state'):
-        #     message = "cookie was {0} and request was {1}. Invalid state parameter".format(login_session['state'], request.args.get('state'))
-        #     response = make_response(json.dumps(message), 401)
-        #     response.headers['Content-Type'] = 'application/json'
-        #     return response
-        # # check if already logged in with cookie
-        # cookie = login_session.get('email')
-        # state = login_session['state']
-        # if cookie is not None:
-        #     user = db_users.find_one({"email": cookie})
-        #     if user:
-        #         msg = {"status" : { "type" : "success" ,   "message" : "User already logged in"}}
-        #         return jsonify(msg)
-        # otherwise, log in
+        # get details from form
         email = request.form['email']
         password = request.form['password']
         user = db_users.find_one({"email": email})
+        # if uyser doesn't exist
         if not user:
             msg = {"status" : { "type" : "success" ,   "message" : "User does not exist, please sign up"}}
             return jsonify(msg)
         stored_pw = user.get("password")
+        # if credentials are wrong
         if not pwd_context.verify(password, stored_pw):
             msg = {"status" : { "type" : "success" ,   "message" : "Invalid password, try again"}}
             return jsonify(msg)
         first_name = user.get("first_name")
         profile_id = user.get("_id")
-        # save login details in cookie
-        # login_session['first_name'] = first_name
-        # login_session['email'] = email
-        # login_session['profile_id'] = str(profile_id)
-        # set is_loggedin = True
+        # set is_loggedin = True if login details are correct
         is_loggedin = db_is_loggedin.find_one({"user": str(profile_id)})
         if is_loggedin:
             if is_loggedin.get("is_loggedin") == False:
@@ -248,14 +218,14 @@ def definitionsearch(category, search_me, userid):
     Factual search.
     Returns factual definitions of the search term.
     """
-    if userid:
+    if db_is_loggedin.find_one({"user": userid}).get("is_loggedin") == True:
         user_id = userid
         search_me = search_me.strip()
         # get wikipedia
         try:
             # see if it is saved in db
             search_term = db_search_terms.find_one({"value": search_me.lower()})
-            if search_term:
+            if search_term and search_term.get("category") == category:
                 search_id = search_term.get("_id")
                 wiki = db_wikipedia.find_one({"search_id": search_id})
                 if wiki:
@@ -267,13 +237,14 @@ def definitionsearch(category, search_me, userid):
             wiki_def = "Oops... couldn't find {}!".format(search_me)
         # check if search_term has been run before
         results = db_search_terms.find_one({"value": search_me.lower()})
-        if results:
+        if results and results.get("category") == category:
             search_id = results.get('_id')
         else:
-            data = {"value": search_me.lower()}
+            data = {"value": search_me.lower(), "category": category}
             search_id = db_search_terms.insert(data, check_keys=False)
         # write data to searches collection
         data = {"search_id": search_id,
+                "category": category,
                 "user": userid,
                 "datetime": datetime.utcnow()}
         x = db_searches.insert(data, check_keys=False)
@@ -285,15 +256,6 @@ def definitionsearch(category, search_me, userid):
                         "wiki_summary": wiki_def,
                         "datetime": datetime.utcnow()}
                 db_wikipedia.update({"search_id": search_id}, {"$set": data})
-                # last_updated = datetime.utcnow() - wiki.get("datetime")
-                # last_updated_diff = last_updated.days
-                # if last_updated_diff > 1:
-                #     data = {"search_id": search_id,
-                #             "wiki_summary": wiki_def,
-                #             "datetime": datetime.utcnow()}
-                #     db_wikipedia.update({"search_id": search_id}, {"$set": data})
-                # else:
-                #     pass
         else:
             data = {"search_id": search_id,
                     "wiki_summary": wiki_def, 
@@ -315,7 +277,7 @@ def papersearch(category, search_me, userid):
     Research paper search.
     Returns research papers of the search term.
     """
-    if userid:
+    if db_is_loggedin.find_one({"user": userid}).get("is_loggedin") == True:
         user_id = userid
         search_me = search_me.strip()
         research_papers = {}
@@ -367,7 +329,7 @@ def wisdom(search_me, source, pdfurl, userid):
     This extracts insights from documents and returns key points,
     abstracts, wordclouds and PDF viewer if possible.
     """
-    if userid:
+    if db_is_loggedin.find_one({"user": userid}).get("is_loggedin") == True:
         ### source needs to be name of data source ("arxiv", "google scholar", "doaj")
         search_me = search_me.strip()
         # check if pdfurl has been found before
@@ -418,7 +380,7 @@ def wisdom(search_me, source, pdfurl, userid):
 def byod(content_type):
     """
     Bring Your Own Document.
-    Make use of the Wisdom AI engine on yoru own
+    Make use of the Wisdom AI engine on your own
     documents. Upload an image from your gallery, take
     a picture or supply a webpage.
     """
@@ -426,7 +388,7 @@ def byod(content_type):
         print("Hi")
     else:
         user_id = request.form['userid']
-        if user_id:
+        if db_is_loggedin.find_one({"user": user_id}).get("is_loggedin") == True:
             if content_type == "gallery":
                 data = request.form['image']
                 name = request.form['name']
@@ -484,7 +446,7 @@ def highlight(search_me, word, userid):
     When user highlights a word on the Wisdom screen,
     this route will provide a definition of that word.
     """
-    if userid:
+    if db_is_loggedin.find_one({"user": userid}).get("is_loggedin") == True:
         word = word.strip()
         results = wisdomaiengine.highlighter(word)
         search_term = db_search_terms.find_one({"value": search_me.lower()})
@@ -511,7 +473,7 @@ def bookmark(search_me, source, url):
     profile, so that they can revisit it easily.
     """
     user_id = request.form['userid']
-    if user_id:
+    if db_is_loggedin.find_one({"user": user_id}).get("is_loggedin") == True:
         search_term = db_search_terms.find_one({"value": search_me.lower()})
         search_id = search_term.get("_id")
         data = {"user": user_id,
@@ -527,13 +489,6 @@ def bookmark(search_me, source, url):
         return jsonify(msg)
 
 
-### Need a profile route to return all their bookmarks and previous searches...
-# email = login_session["email"]
-# bookmarks = list(db_bookmarks.find({"email": email}))
-# jsonob = jsonify(bookmarks=bookmarks)
-# return jsonob
-
-
 # profile page
 @app.route('/profile/<string:userid>', methods=["GET"])
 def profile(userid):
@@ -543,22 +498,20 @@ def profile(userid):
     within Wisdom that the user needs when logging
     into the application.
     """
-    if userid:
-        #first_name = login_session['first_name']
+    if db_is_loggedin.find_one({"user": userid}).get("is_loggedin") == True:
+        # get bookmarked content
         bookmarks = db_bookmarks.find({"user": userid})
         bookmarks = [{"search_term": db_search_terms.find_one({"_id": b["search_id"]}).get("value"), "source": b["source"], "url": b["url"], "date_saved": b["date_saved"].strftime("%H:%M %B %d, %Y")} for b in bookmarks]
+        # get previous searches
         searches = db_searches.find({"user": userid})
-        searches = [{"search_term": db_search_terms.find_one({"_id": s["search_id"]}).get("value"), "datetime": s["datetime"].strftime("%H:%M %B %d, %Y")} for s in searches]
+        searches = [{"search_term": db_search_terms.find_one({"_id": s["search_id"]}).get("value"), "category": s["category"], "datetime": s["datetime"].strftime("%H:%M %B %d, %Y")} for s in searches]
+        # get byod
         byod = db_byod.find({"user": userid})
         byod = [{"content_type": b["content_type"], "doc_name": b["doc_name"], "text": b["text"], "datetime_uploaded": b["datetime_uploaded"].strftime("%H:%M %B %d, %Y")} for b in byod]
+        # get highlightds
         highlights = db_highlights.find({"user": userid})
         highlights = [{"search_term": db_search_terms.find_one({"_id": h["search_id"]}).get("value"), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"].strftime("%H:%M %B %d, %Y")} for h in highlights]
         # top 10 searches in community
-        # agg = db_searches.aggregate([
-        #             {"$group": {"_id": "$search_id",
-        #                         "count": {"$sum": 1}
-        #                         }
-        #             }])
         agg = [s["search_id"] for s in db_searches.find()]
         table = pd.DataFrame()
         table["searches"] = Counter(agg).keys()
