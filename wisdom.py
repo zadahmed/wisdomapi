@@ -395,13 +395,16 @@ def byod(content_type):
                 nparr = np.fromstring(base64.b64decode(data), np.uint8)
                 img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 text = wisdomaiengine.bringyourowndocument(img)
+                key_points = wisdomaiengine.summarisetext(text)
                 save = {"user": user_id,
                         "content_type": content_type,
                         "doc_name": name,
                         "text": text,
+                        "key_points": key_points,
                         "datetime_uploaded": datetime.utcnow()}
                 x = db_byod.insert(save, check_keys=False)
-                jsonob = jsonify(img=text)
+                jsonob = jsonify(text=text,
+                                 key_points=key_points)
                 return jsonob
             if content_type == "camera":
                 return None
@@ -425,13 +428,16 @@ def byod(content_type):
                 for m in main_body:
                     text += m.get_text()+" "
                 text = text.strip()
+                key_points = wisdomaiengine.summarisetext(text)
                 save = {"user": user_id,
                         "content_type": content_type,
                         "doc_name": name,
                         "text": text,
+                        "key_points": key_points,
                         "datetime_uploaded": datetime.utcnow()}
                 x = db_byod.insert(save, check_keys=False)
-                jsonob = jsonify(text=text)
+                jsonob = jsonify(text=text,
+                                 key_points=key_points)
                 return jsonob
         else:
             msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
