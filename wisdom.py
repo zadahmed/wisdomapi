@@ -93,11 +93,11 @@ def signup():
         email = request.form['email']
         password = request.form['password']
         if first_name is None or email is None or password is None:
-            msg = {"status" : { "type" : "success" ,   "message" : "Missing fields"}}
+            msg = {"status" : { "type" : "fail" ,   "message" : "Missing fields"}}
             return jsonify(msg)
         user = db_users.find_one({"email": email})
         if user:
-            msg = {"status" : { "type" : "success" ,   "message" : "User already exists"}}
+            msg = {"status" : { "type" : "fail" ,   "message" : "User already exists"}}
             return jsonify(msg)
         # hash password
         hashed_pw = pwd_context.hash(password)
@@ -132,12 +132,12 @@ def login():
         user = db_users.find_one({"email": email})
         # if uyser doesn't exist
         if not user:
-            msg = {"status" : { "type" : "success" ,   "message" : "User does not exist, please sign up"}}
+            msg = {"status" : { "type" : "fail" ,   "message" : "User does not exist, please sign up"}}
             return jsonify(msg)
         stored_pw = user.get("password")
         # if credentials are wrong
         if not pwd_context.verify(password, stored_pw):
-            msg = {"status" : { "type" : "success" ,   "message" : "Invalid password, try again"}}
+            msg = {"status" : { "type" : "fail" ,   "message" : "Invalid password, try again"}}
             return jsonify(msg)
         first_name = user.get("first_name")
         profile_id = user.get("_id")
@@ -150,10 +150,10 @@ def login():
                 msg = {"id": str(profile_id)}
                 return jsonify(msg)
             else:
-                msg = {"status" : { "type" : "success" ,   "message" : "Already logged in"}}
+                msg = {"id": str(profile_id)}
                 return jsonify(msg)
         else:
-            msg = {"status" : { "type" : "success" ,   "message" : "User not found, please sign up"}}
+            msg = {"status" : { "type" : "fail" ,   "message" : "User not found, please sign up"}}
             return jsonify(msg)
 
 
@@ -174,13 +174,13 @@ def logout(userid):
                 msg = {"status" : { "type" : "success" ,   "message" : "Logged out"}}
                 return jsonify(msg)
             else:
-                msg = {"status" : { "type" : "success" ,   "message" : "Already logged out"}}
+                msg = {"status" : { "type" : "fail" ,   "message" : "Already logged out"}}
                 return jsonify(msg)
         else:
-            msg = {"status" : { "type" : "success" ,   "message" : "User not found, sign up"}}
+            msg = {"status" : { "type" : "fail" ,   "message" : "User not found, sign up"}}
             return jsonify(msg)
     else:
-        msg = {"status" : { "type" : "success" ,   "message" : "Provide userid"}}
+        msg = {"status" : { "type" : "fail" ,   "message" : "Provide userid"}}
         return jsonify(msg)
 
 
@@ -201,13 +201,13 @@ def logincheck(userid):
                 msg = {str(userid)}
                 return jsonify(msg)
             else:
-                msg = {"status" : { "type" : "success" ,   "message" : "User is logged out"}}
+                msg = {"status" : { "type" : "fail" ,   "message" : "User is logged out"}}
                 return jsonify(msg)
         else:
-            msg = {"status" : { "type" : "success" ,   "message" : "User not found, sign up"}}
+            msg = {"status" : { "type" : "fail" ,   "message" : "User not found, sign up"}}
             return jsonify(msg)
     else:
-        msg = {"status" : { "type" : "success" ,   "message" : "Provide userid"}}
+        msg = {"status" : { "type" : "fail" ,   "message" : "Provide userid"}}
         return jsonify(msg)
 
 
@@ -266,7 +266,7 @@ def definitionsearch(category, search_me, userid):
                          factual=wiki_def)
         return jsonob
     else:
-        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
         return jsonify(msg)
 
     
@@ -317,7 +317,7 @@ def papersearch(category, search_me, userid):
                          wordcloud=wordcloud)
         return jsonob
     else:
-        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
         return jsonify(msg)
 
 
@@ -371,7 +371,7 @@ def wisdom(search_me, source, pdfurl, userid):
         summaryjson = jsonify(wisdomtopics=topics, wisdomsummary=summary)
         return summaryjson
     else:
-        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
         return jsonify(msg)
 
 
@@ -434,7 +434,7 @@ def byod(content_type):
                 jsonob = jsonify(text=text)
                 return jsonob
         else:
-            msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+            msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
             return jsonify(msg)
 
 
@@ -460,7 +460,7 @@ def highlight(search_me, word, userid):
         jsonob = jsonify(results=results)
         return jsonob
     else:
-        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
         return jsonify(msg)
 
 
@@ -485,7 +485,7 @@ def bookmark(search_me, source, url):
         msg = {"status" : { "type" : "success" ,   "message" : "Bookmark created"}}
         return jsonify(msg)
     else:
-        msg = {"status" : { "type" : "success" ,   "message" : "Please log in"}}
+        msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
         return jsonify(msg)
 
 
@@ -509,9 +509,26 @@ def profile(userid):
         byod = db_byod.find({"user": userid})
         byod = [{"content_type": b["content_type"], "doc_name": b["doc_name"], "text": b["text"], "datetime_uploaded": b["datetime_uploaded"].strftime("%H:%M %B %d, %Y")} for b in byod]
         # get highlightds
-        highlights = db_highlights.find({"user": userid})
-        highlights = [{"search_term": db_search_terms.find_one({"_id": h["search_id"]}).get("value"), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"].strftime("%H:%M %B %d, %Y")} for h in highlights]
-        # top 10 searches in community
+        # highlights = db_highlights.find({"user": userid})
+        # highlights = [{"search_term": db_search_terms.find_one({"_id": h["search_id"]}).get("value"), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"].strftime("%H:%M %B %d, %Y")} for h in highlights]
+        jsonob = jsonify(bookmarks=bookmarks,
+                         searches=searches,
+                         byod=byod)
+        return jsonob
+    else:
+        msg = {"status": {"type": "fail", "message": "Please log in"}}
+        return jsonify(msg)
+
+
+# top 10 searches
+@app.route('/wisdom/top_n/<string:userid>', methods=["GET"])
+def top_n(userid):
+    """
+    Top N
+    This API returns the top N searches by count
+    from the Wisdom community.
+    """
+    if db_is_loggedin.find_one({"user": userid}).get("is_loggedin") == True:
         agg = [s["search_id"] for s in db_searches.find()]
         table = pd.DataFrame()
         table["searches"] = Counter(agg).keys()
@@ -525,14 +542,10 @@ def profile(userid):
         while n < len(search_ids):
             top_n.append([str(db_search_terms.find_one({"_id": search_ids[n]}).get("value")), str(counts[n])])
             n += 1
-        jsonob = jsonify(bookmarks=bookmarks,
-                         searches=searches,
-                         byod=byod,
-                         highlights=highlights,
-                         top_n=top_n)
+        jsonob = jsonify(top_n=top_n)
         return jsonob
     else:
-        msg = {"status": {"type": "success", "message": "Please log in"}}
+        msg = {"status": {"type": "fail", "message": "Please log in"}}
         return jsonify(msg)
 
                                                                                     
