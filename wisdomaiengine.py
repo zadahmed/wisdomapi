@@ -1114,7 +1114,7 @@ def factualsearch(category, search_me):
             return results
         except:
             results = "Couldn't find author..."
-            return results
+            return resul
     # get wikipedia summaries
     if final_pages:
         # get results
