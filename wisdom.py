@@ -198,7 +198,7 @@ def logincheck(userid):
         is_loggedin = db_is_loggedin.find_one({"user": str(userid)})
         if is_loggedin:
             if is_loggedin.get("is_loggedin") == True:
-                msg = {str(userid)}
+                msg = {'id':str(userid)}
                 return jsonify(msg)
             else:
                 msg = {"status" : { "type" : "fail" ,   "message" : "User is logged out"}}
@@ -218,56 +218,53 @@ def definitionsearch(category, search_me, userid):
     Factual search.
     Returns factual definitions of the search term.
     """
-    if db_is_loggedin.find_one({"user": userid}).get("is_loggedin") == True:
-        user_id = userid
-        search_me = search_me.strip()
-        # get wikipedia
-        try:
-            # see if it is saved in db
-            search_term = db_search_terms.find_one({"value": search_me.lower()})
-            if search_term and search_term.get("category") == category:
-                search_id = search_term.get("_id")
-                wiki = db_wikipedia.find_one({"search_id": search_id})
-                if wiki:
-                    wiki_def = wiki.get('wiki_summary')
-            # else use wikipedia API
-            else:
-                wiki_def = wisdomaiengine.factualsearch(category, search_me.lower())
-        except:
-            wiki_def = "Oops... couldn't find {}!".format(search_me)
-        # check if search_term has been run before
-        results = db_search_terms.find_one({"value": search_me.lower()})
-        if results and results.get("category") == category:
-            search_id = results.get('_id')
+    user_id = userid
+    search_me = search_me.strip()
+    # get wikipedia
+    try:
+        # see if it is saved in db
+        search_term = db_search_terms.find_one({"value": search_me.lower()})
+        if search_term and search_term.get("category") == category:
+            search_id = search_term.get("_id")
+            wiki = db_wikipedia.find_one({"search_id": search_id})
+            if wiki:
+                wiki_def = wiki.get('wiki_summary')
+        # else use wikipedia API
         else:
-            data = {"value": search_me.lower(), "category": category}
-            search_id = db_search_terms.insert(data, check_keys=False)
-        # write data to searches collection
-        data = {"search_id": search_id,
-                "category": category,
-                "user": userid,
-                "datetime": datetime.utcnow()}
-        x = db_searches.insert(data, check_keys=False)
-        # save data to wikipedia collection
-        wiki = db_wikipedia.find_one({"search_id": search_id})
-        if wiki:
-            if wiki.get("wiki_summary") != wiki_def:
-                data = {"search_id": search_id,
-                        "wiki_summary": wiki_def,
-                        "datetime": datetime.utcnow()}
-                db_wikipedia.update({"search_id": search_id}, {"$set": data})
-        else:
-            data = {"search_id": search_id,
-                    "wiki_summary": wiki_def, 
-                    "datetime": datetime.utcnow()}
-            x = db_wikipedia.insert(data, check_keys=False)
-        # return json
-        jsonob = jsonify(search=search_me,
-                         factual=wiki_def)
-        return jsonob
+            wiki_def = wisdomaiengine.factualsearch(category, search_me.lower())
+    except:
+        wiki_def = "Oops"
+    # check if search_term has been run before
+    results = db_search_terms.find_one({"value": search_me.lower()})
+    if results and results.get("category") == category:
+        search_id = results.get('_id')
     else:
-        msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
-        return jsonify(msg)
+        data = {"value": search_me.lower(), "category": category}
+        search_id = db_search_terms.insert(data, check_keys=False)
+    # write data to searches collection
+    data = {"search_id": search_id,
+            "category": category,
+            "user": userid,
+            "datetime": datetime.utcnow()}
+    x = db_searches.insert(data, check_keys=False)
+    # save data to wikipedia collection
+    wiki = db_wikipedia.find_one({"search_id": search_id})
+    if wiki:
+        if wiki.get("wiki_summary") != wiki_def:
+            data = {"search_id": search_id,
+                    "wiki_summary": wiki_def,
+                    "datetime": datetime.utcnow()}
+            db_wikipedia.update({"search_id": search_id}, {"$set": data})
+    else:
+        data = {"search_id": search_id,
+                "wiki_summary": wiki_def, 
+                "datetime": datetime.utcnow()}
+        x = db_wikipedia.insert(data, check_keys=False)
+    # return json
+    jsonob = jsonify(search=search_me,
+                    factual=wiki_def)
+    return jsonob
+
 
     
 # research papers
@@ -277,48 +274,46 @@ def papersearch(category, search_me, userid):
     Research paper search.
     Returns research papers of the search term.
     """
-    if db_is_loggedin.find_one({"user": userid}).get("is_loggedin") == True:
-        user_id = userid
-        search_me = search_me.strip()
-        research_papers = {}
-        all_papers = []
-        # get arxiv results
-        try:
-            papers = wisdomaiengine.getarxivresults(search_me.lower())
-            for paper in papers:
-                all_papers.append(paper[1])
-            research_papers["arxiv"] = papers
-        except:
-            research_papers["arxiv"] = ""
-        # get google scholar results
-        try:
-            google_scholar = wisdomaiengine.getgooglescholar(search_me.lower())
-            research_papers["google scholar"] = google_scholar
-            for paper in google_scholar:
-                all_papers.append(paper[-1])
-        except:
-            research_papers["google scholar"] = ""
-        # get DOAJ articles
-        try:
-            doaj = wisdomaiengine.getdoajarticles(search_me.lower())
-            research_papers["DOAJ"] = doaj
-            for article in doaj:
-                all_papers.append(article[2])
-        except:
-            research_papers["DOAJ"] = ""
-        # get wordcloud of all papers
-        try:
-            all_papers_text = " ".join(a for a in all_papers)
-            wordcloud = wisdomaiengine.wordcloud(search_me, all_papers_text)
-        except:
-            wordcloud = "No topics found!..."
-        # return json object
-        jsonob = jsonify(papers=research_papers,
-                         wordcloud=wordcloud)
-        return jsonob
-    else:
-        msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
-        return jsonify(msg)
+
+    user_id = userid
+    search_me = search_me.strip()
+    research_papers = {}
+    all_papers = []
+    # get arxiv results
+    try:
+        papers = wisdomaiengine.getarxivresults(search_me.lower())
+        for paper in papers:
+            all_papers.append(paper[1])
+        research_papers["arxiv"] = papers
+    except:
+        research_papers["arxiv"] = ""
+    # get google scholar results
+    try:
+        google_scholar = wisdomaiengine.getgooglescholar(search_me.lower())
+        research_papers["google scholar"] = google_scholar
+        for paper in google_scholar:
+            all_papers.append(paper[-1])
+    except:
+        research_papers["google scholar"] = ""
+    # get DOAJ articles
+    try:
+        doaj = wisdomaiengine.getdoajarticles(search_me.lower())
+        research_papers["DOAJ"] = doaj
+        for article in doaj:
+            all_papers.append(article[2])
+    except:
+        research_papers["DOAJ"] = ""
+    # get wordcloud of all papers
+    try:
+        all_papers_text = " ".join(a for a in all_papers)
+        wordcloud = wisdomaiengine.wordcloud(search_me, all_papers_text)
+    except:
+        wordcloud = "No topics found!..."
+    # return json object
+    jsonob = jsonify(papers=research_papers,
+                        wordcloud=wordcloud)
+    return jsonob
+
 
 
 # wisdom engine
@@ -329,50 +324,48 @@ def wisdom(search_me, source, pdfurl, userid):
     This extracts insights from documents and returns key points,
     abstracts, wordclouds and PDF viewer if possible.
     """
-    if db_is_loggedin.find_one({"user": userid}).get("is_loggedin") == True:
-        ### source needs to be name of data source ("arxiv", "google scholar", "doaj")
-        search_me = search_me.strip()
-        # check if pdfurl has been found before
-        pdf = db_summaries.find_one({"url": pdfurl})
-        if pdf:
-            text = pdf.get('text')
-            summary = pdf.get('summary')
-            topics = pdf.get('topics')
-            # update in db if data is 1 days or older
-            last_updated = datetime.utcnow() - pdf.get("last_updated")
-            last_updated_diff = last_updated.days
-            if last_updated_diff > 1:
-                search_term = db_search_terms.find_one({"value": search_me.lower()})
-                search_id = search_term.get("_id")
-                data = {"search_id": search_id,
-                        "url": pdfurl, "source": source, "text": text,
-                        "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
-                db_summaries.update({"url": pdfurl}, {"$set": data})
-            else:
-                pass
-        else:
-            text = wisdomaiengine.pdfdocumentextracter(pdfurl)
-            summary = wisdomaiengine.summarisepdfdocument(text)
-            topics = wisdomaiengine.wordcloud(search_me, text)
-            if topics is None:
-                topics = ['No Topics Found']
-            # write data to arxiv collection
+
+    ### source needs to be name of data source ("arxiv", "google scholar", "doaj")
+    search_me = search_me.strip()
+    # check if pdfurl has been found before
+    pdf = db_summaries.find_one({"url": pdfurl})
+    if pdf:
+        text = pdf.get('text')
+        summary = pdf.get('summary')
+        topics = pdf.get('topics')
+        # update in db if data is 1 days or older
+        last_updated = datetime.utcnow() - pdf.get("last_updated")
+        last_updated_diff = last_updated.days
+        if last_updated_diff > 1:
             search_term = db_search_terms.find_one({"value": search_me.lower()})
             search_id = search_term.get("_id")
             data = {"search_id": search_id,
-                    "url": pdfurl,
-                    "source": source,
-                    "text": text,
-                    "summary": summary,
-                    "topics": topics,
-                    "last_updated": datetime.utcnow()}
-            x = db_summaries.insert(data, check_keys=False)
-        # return json
-        summaryjson = jsonify(wisdomtopics=topics, wisdomsummary=summary)
-        return summaryjson
+                    "url": pdfurl, "source": source, "text": text,
+                    "summary": summary, "topics": topics, "last_updated": datetime.utcnow()}
+            db_summaries.update({"url": pdfurl}, {"$set": data})
+        else:
+            pass
     else:
-        msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
-        return jsonify(msg)
+        text = wisdomaiengine.pdfdocumentextracter(pdfurl)
+        summary = wisdomaiengine.summarisepdfdocument(text)
+        topics = wisdomaiengine.wordcloud(search_me, text)
+        if topics is None:
+            topics = ['No Topics Found']
+        # write data to arxiv collection
+        search_term = db_search_terms.find_one({"value": search_me.lower()})
+        search_id = search_term.get("_id")
+        data = {"search_id": search_id,
+                "url": pdfurl,
+                "source": source,
+                "text": text,
+                "summary": summary,
+                "topics": topics,
+                "last_updated": datetime.utcnow()}
+        x = db_summaries.insert(data, check_keys=False)
+    # return json
+    summaryjson = jsonify(wisdomtopics=topics, wisdomsummary=summary)
+    return summaryjson
+
 
 
 # bring your own document
@@ -388,34 +381,51 @@ def byod(content_type):
         print("Hi")
     else:
         user_id = request.form['userid']
-        if db_is_loggedin.find_one({"user": user_id}).get("is_loggedin") == True:
-            if content_type == "gallery":
-                data = request.form['image']
-                name = request.form['name']
-                nparr = np.fromstring(base64.b64decode(data), np.uint8)
-                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                text = wisdomaiengine.bringyourowndocument(img)
-                key_points = wisdomaiengine.summarisetext(text)
-                save = {"user": user_id,
-                        "content_type": content_type,
-                        "doc_name": name,
-                        "text": text,
-                        "key_points": key_points,
-                        "datetime_uploaded": datetime.utcnow()}
-                x = db_byod.insert(save, check_keys=False)
-                jsonob = jsonify(text=text,
-                                 key_points=key_points)
-                return jsonob
-            if content_type == "camera":
-                return None
-            if content_type == "webpage":
-                page = request.form['data']
-                name = request.form['name']
-                r = requests.get(page)
-                html = r.text
-                soup = BeautifulSoup(html, 'html.parser')
-                #soup = BeautifulSoup(html, 'lxml')
-                body = soup.body
+        if content_type == "gallery":
+            data = request.form['image']
+            name = request.form['name']
+            nparr = np.fromstring(base64.b64decode(data), np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            text = wisdomaiengine.bringyourowndocument(img)
+            key_points = wisdomaiengine.summarisetext(text)
+            key_points = "\n\n".join(k for k in key_points)
+            save = {"user": user_id,
+                    "content_type": content_type,
+                    "doc_name": name,
+                    "text": text,
+                    "key_points": key_points,
+                    "datetime_uploaded": datetime.utcnow()}
+            x = db_byod.insert(save, check_keys=False)
+            jsonob = jsonify(text=text,
+                             key_points=key_points)
+            return jsonob
+        if content_type == "camera":
+            data = request.form['image']
+            name = request.form['name']
+            nparr = np.fromstring(base64.b64decode(data), np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            text = wisdomaiengine.bringyourowndocument(img)
+            key_points = wisdomaiengine.summarisetext(text)
+            key_points = "\n\n".join(k for k in key_points)
+            save = {"user": user_id,
+                    "content_type": content_type,
+                    "doc_name": name,
+                    "text": text,
+                    "key_points": key_points,
+                    "datetime_uploaded": datetime.utcnow()}
+            x = db_byod.insert(save, check_keys=False)
+            jsonob = jsonify(text=text,
+                             key_points=key_points)
+            return jsonob
+        if content_type == "webpage":
+            page = request.form['data']
+            name = request.form['name']
+            r = requests.get(page)
+            html = r.text
+            soup = BeautifulSoup(html, 'html.parser')
+            #soup = BeautifulSoup(html, 'lxml')
+            body = soup.body
+            if body:
                 # remove footer
                 while body.footer:
                     soup.footer.decompose()
@@ -429,6 +439,7 @@ def byod(content_type):
                     text += m.get_text()+" "
                 text = text.strip()
                 key_points = wisdomaiengine.summarisetext(text)
+                key_points = "\n\n".join(k for k in key_points)
                 save = {"user": user_id,
                         "content_type": content_type,
                         "doc_name": name,
@@ -438,10 +449,10 @@ def byod(content_type):
                 x = db_byod.insert(save, check_keys=False)
                 jsonob = jsonify(text=text,
                                  key_points=key_points)
-                return jsonob
-        else:
-            msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
-            return jsonify(msg)
+            else:
+                msg = {"No text found, please try another website"}
+                jsonob = jsonify(msg)
+        return jsonob
 
 
 # highlighter
@@ -479,20 +490,17 @@ def bookmark(search_me, source, url):
     profile, so that they can revisit it easily.
     """
     user_id = request.form['userid']
-    if db_is_loggedin.find_one({"user": user_id}).get("is_loggedin") == True:
-        search_term = db_search_terms.find_one({"value": search_me.lower()})
-        search_id = search_term.get("_id")
-        data = {"user": user_id,
-                "search_id": search_id,
-                "source": source,
-                "url": url, 
-                "date_saved": datetime.utcnow()}
-        x = db_bookmarks.insert(data, check_keys=False)
-        msg = {"status" : { "type" : "success" ,   "message" : "Bookmark created"}}
-        return jsonify(msg)
-    else:
-        msg = {"status" : { "type" : "fail" ,   "message" : "Please log in"}}
-        return jsonify(msg)
+    search_term = db_search_terms.find_one({"value": search_me.lower()})
+    search_id = search_term.get("_id")
+    data = {"user": user_id,
+            "search_id": search_id,
+            "source": source,
+            "url": url, 
+            "date_saved": datetime.utcnow()}
+    x = db_bookmarks.insert(data, check_keys=False)
+    msg = {"status" : { "type" : "success" ,   "message" : "Bookmark created"}}
+    return jsonify(msg)
+
 
 
 # profile page
@@ -504,26 +512,22 @@ def profile(userid):
     within Wisdom that the user needs when logging
     into the application.
     """
-    if db_is_loggedin.find_one({"user": userid}).get("is_loggedin") == True:
-        # get bookmarked content
-        bookmarks = db_bookmarks.find({"user": userid})
-        bookmarks = [{"search_term": db_search_terms.find_one({"_id": b["search_id"]}).get("value"), "source": b["source"], "url": b["url"], "date_saved": b["date_saved"].strftime("%H:%M %B %d, %Y")} for b in bookmarks]
-        # get previous searches
-        searches = db_searches.find({"user": userid})
-        searches = [{"search_term": db_search_terms.find_one({"_id": s["search_id"]}).get("value"), "category": s["category"], "datetime": s["datetime"].strftime("%H:%M %B %d, %Y")} for s in searches]
-        # get byod
-        byod = db_byod.find({"user": userid})
-        byod = [{"content_type": b["content_type"], "doc_name": b["doc_name"], "text": b["text"], "datetime_uploaded": b["datetime_uploaded"].strftime("%H:%M %B %d, %Y")} for b in byod]
-        # get highlightds
-        # highlights = db_highlights.find({"user": userid})
-        # highlights = [{"search_term": db_search_terms.find_one({"_id": h["search_id"]}).get("value"), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"].strftime("%H:%M %B %d, %Y")} for h in highlights]
-        jsonob = jsonify(bookmarks=bookmarks,
-                         searches=searches,
-                         byod=byod)
-        return jsonob
-    else:
-        msg = {"status": {"type": "fail", "message": "Please log in"}}
-        return jsonify(msg)
+    # get bookmarked content
+    bookmarks = db_bookmarks.find({"user": userid})
+    bookmarks = [{"search_term": db_search_terms.find_one({"_id": b["search_id"]}).get("value"), "source": b["source"], "url": b["url"], "date_saved": b["date_saved"].strftime("%H:%M %B %d, %Y")} for b in bookmarks]
+    # get previous searches
+    searches = db_searches.find({"user": userid})
+    searches = [{"search_term": db_search_terms.find_one({"_id": s["search_id"]}).get("value"), "category": s["category"], "datetime": s["datetime"].strftime("%H:%M %B %d, %Y")} for s in searches]
+    # get byod
+    byod = db_byod.find({"user": userid})
+    byod = [{"content_type": b["content_type"], "doc_name": b["doc_name"], "text": b["text"], "key_points": b["key_points"], "datetime_uploaded": b["datetime_uploaded"].strftime("%H:%M %B %d, %Y")} for b in byod]
+    # get highlightds
+    # highlights = db_highlights.find({"user": userid})
+    # highlights = [{"search_term": db_search_terms.find_one({"_id": h["search_id"]}).get("value"), "highlighted_word": h["highlighted_word"], "results": h["results"], "date_saved": h["date_saved"].strftime("%H:%M %B %d, %Y")} for h in highlights]
+    jsonob = jsonify(bookmarks=bookmarks,
+                     searches=searches,
+                     byod=byod)
+    return jsonob
 
 
 # top 10 searches
@@ -534,27 +538,23 @@ def top_n(userid):
     This API returns the top N searches by count
     from the Wisdom community.
     """
-    if db_is_loggedin.find_one({"user": userid}).get("is_loggedin") == True:
-        agg = [s["search_id"] for s in db_searches.find()]
-        table = pd.DataFrame()
-        table["searches"] = Counter(agg).keys()
-        table["count"] = Counter(agg).values()
-        table = table.sort_values("count", ascending=False)
-        table = table[:10]
-        search_ids = table["searches"].values
-        counts = table["count"].values
-        n = 0
-        top_n = []
-        while n < len(search_ids):
-            top_n.append([str(db_search_terms.find_one({"_id": search_ids[n]}).get("value")), str(counts[n])])
-            n += 1
-        jsonob = jsonify(top_n=top_n)
-        return jsonob
-    else:
-        msg = {"status": {"type": "fail", "message": "Please log in"}}
-        return jsonify(msg)
+    agg = [s["search_id"] for s in db_searches.find()]
+    table = pd.DataFrame()
+    table["searches"] = Counter(agg).keys()
+    table["count"] = Counter(agg).values()
+    table = table.sort_values("count", ascending=False)
+    table = table[:10]
+    search_ids = table["searches"].values
+    counts = table["count"].values
+    n = 0
+    top_n = []
+    while n < len(search_ids):
+        top_n.append([str(db_search_terms.find_one({"_id": search_ids[n]}).get("value")), str(counts[n])])
+        n += 1
+    jsonob = jsonify(top_n=top_n)
+    return jsonob
 
-                                                                                    
+                                                                            
 # run server
 if __name__ == '__main__':
     app.run(host='0.0.0.0', threaded=True, port=5000)

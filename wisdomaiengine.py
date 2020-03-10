@@ -1103,7 +1103,8 @@ def factualsearch(category, search_me):
                             cited_by.append("")
                         # interests
                         try:
-                            interests.append(result.interests)
+                            print(", ".join(i for i in result.interests))
+                            interests.append(", ".join(i for i in result.interests))
                         except:
                             interests.append("")
                     cnt += 1
