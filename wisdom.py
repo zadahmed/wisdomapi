@@ -79,6 +79,13 @@ def home():
     return render_template("index.html")
 
 
+# privacy policy
+@app.route("/privacy_policy", methods=["GET"])
+def privacy_policy():
+    "Temporary page for Privacy Policy"
+    return render_template("privacy_policy.html")
+
+
 # sign up
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -324,7 +331,6 @@ def wisdom(search_me, source, pdfurl, userid):
     This extracts insights from documents and returns key points,
     abstracts, wordclouds and PDF viewer if possible.
     """
-
     ### source needs to be name of data source ("arxiv", "google scholar", "doaj")
     search_me = search_me.strip()
     # check if pdfurl has been found before
@@ -450,7 +456,7 @@ def byod(content_type):
                 jsonob = jsonify(text=text,
                                  key_points=key_points)
             else:
-                msg = {"No text found, please try another website"}
+                msg = {"text":"No text found, please try another website"}
                 jsonob = jsonify(msg)
         return jsonob
 
