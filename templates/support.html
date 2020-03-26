@@ -37,19 +37,19 @@
                     <div class="menu_area h-150">
                         <nav class="navbar h-150 navbar-expand-lg align-items-center">
                             <!-- Logo -->
-                            <a class="navbar-brand" href="{{url_for('home')}}" style="vertical-align: middle;"><img src="../static/img/core-img/transparent_light.png" width="13%" alt="logo"></a>
+                            <a class="navbar-brand" href="index.html" style="vertical-align: middle;"><img src="../static/img/core-img/transparent_light.png" width="13%" alt="logo"></a>
 
                             <!-- Menu Area -->
                             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#mosh-navbar" aria-controls="mosh-navbar" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
 
                             <div class="collapse navbar-collapse justify-content-end" id="mosh-navbar">
                                 <ul class="navbar-nav animated" id="nav">
-                                    <li class="nav-item active"><a class="nav-link" href="{{url_for('home')}}">Home</a></li>
+                                    <li class="nav-item active"><a class="nav-link" href="index.html">Home</a></li>
                                     <li class="nav-item"><a class="nav-link" href="#">About</a></li>
                                     <li class="nav-item"><a class="nav-link" href="#">Technology</a></li>
                                     <li class="nav-item"><a class="nav-link" href="#">Blog</a></li>
                                     <li class="nav-item"><a class="nav-link" href="#">Contact</a></li>
-                                    <li class="nav-item"><a class="nav-link" href="{{url_for('support')}}">Support</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="support.html">Support</a></li>
                                 </ul>
                                 <!-- Search Form Area Start -->
                                 <div class="search-form-area animated">
@@ -104,16 +104,16 @@
                 <div class="col-12 col-md-8">
                     <div class="contact-form-area">
                         <h2>Get in touch</h2>
-                        <form action="{{url_for('support')}}" method='post'>
+                        <form action="#">
                             <div class="row">
                                 <div class="col-12 col-md-6">
-                                    <input type="text" class="form-control" id="name" placeholder="Name" name="name">
+                                    <input type="text" class="form-control" id="name" placeholder="Name">
                                 </div>
                                 <div class="col-12 col-md-6">
-                                    <input type="email" class="form-control" id="email" placeholder="E-mail" name="email">
+                                    <input type="email" class="form-control" id="email" placeholder="E-mail">
                                 </div>
                                 <div class="col-12">
-                                    <input type="text" class="form-control" id="subject" placeholder="Subject" name="subject">
+                                    <input type="text" class="form-control" id="subject" placeholder="Subject">
                                 </div>
                                 <div class="col-12">
                                     <textarea name="message" class="form-control" id="message" cols="30" rows="10" placeholder="Message"></textarea>
@@ -126,7 +126,7 @@
                 <!-- Contact Information -->
                 <div class="col-12 col-md-4">
                     <div class="contact-information">
-                        <h2></h2>
+                        <h2>Contact</h2>
                         <div class="single-contact-info d-flex">
                             <div class="contact-icon mr-15">
                                 <img src="../static/img/core-img/map.png" alt="">
@@ -170,21 +170,20 @@
                 <div class="row">
                     <div class="col-12 col-sm-6 col-lg-3">
                         <div class="single-footer-widget mb-100">
-                            <a href="#" class="mb-50 d-block"><img src="../static/img/core-img/transparent_light.png" width="25%" alt=""></a>
-                            <p>Making information, delightful.</p>
+                            <a href="#" class="mb-50 d-block"><img src="../static/img/core-img/dark_icon.png" width="50%" alt=""></a>
                         </div>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
                         <div class="single-footer-widget mb-100">
                             <h5>Fast links</h5>
                             <ul>
-                                <li><a href="{{url_for('home')}}">Home</a></li>
+                                <li><a href="#">Home</a></li>
                                 <li><a href="#">About</a></li>
                                 <li><a href="#">Technology</a></li>
                                 <li><a href="#">Blog</a></li>
                                 <li><a href="#">Contact</a></li>
-                                <li><a href="{{url_for('support')}}">Support</a></li>
-                                <li><a href="{{url_for('privacy_policy')}}">Privacy policy</a></li>
+                                <li><a href="support.html">Support</a></li>
+                                <li><a href="privacy_policy.html">Privacy policy</a></li>
                             </ul>
                         </div>
                     </div>
