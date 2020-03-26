@@ -96,6 +96,9 @@
         padding: 0;
         height: 80px;
     }
+    #imgcontainer {
+        width:200px;
+    }
     .navbar-toggler {
         border: 2px solid #fff;
         background-color: #f2f4f6;

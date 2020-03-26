@@ -492,6 +492,7 @@ img {
     z-index: 1;
 }
 
+
 .hero-slide-content h2 {
     font-size: 60px;
     color: #fff;
@@ -509,6 +510,14 @@ img {
     margin-top: 100px;
     font-weight: 400;
 }
+
+#imgcontainer {
+    width:400px;
+}
+/* 
+#imagecontainer{ 
+    width: 500px;
+} */
 
 .hero-slides .owl-prev,
 .hero-slides .owl-next {
