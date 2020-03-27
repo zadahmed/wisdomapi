@@ -96,8 +96,9 @@
         padding: 0;
         height: 80px;
     }
+
     #imgcontainer {
-        width:200px;
+        width:140px;
     }
     .navbar-toggler {
         border: 2px solid #fff;
@@ -136,6 +137,7 @@
     .welcome_area,
     .single-hero-slide {
         height: 600px;
+        padding-top: 20px;
     }
     .hero-slides .owl-next {
         right: 5px;
