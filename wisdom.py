@@ -41,7 +41,6 @@ app.config.update(dict(
     MAIL_PASSWORD = '5upp0rT!Rz0ulZ',
 ))
 mail = Mail(app)
-app.secret_key = "super secret key"
 dir = os.path.abspath(os.path.dirname(__file__)) #  Directory
 # user and pwd need to be environment variable os.environ["MONGO_DB_USER"]
 user = "admin"
