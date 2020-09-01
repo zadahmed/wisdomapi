@@ -1,5 +1,9 @@
 ## Wisdom Deployment
 
+### SSH 
+
+    $ zahid@157.245.44.126
+
 ### Setting up Ubuntu DigitalOcean droplet
 
 Follow this tutorial to set up Ubuntu 18.04 server: https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-uswgi-and-nginx-on-ubuntu-18-04
@@ -9,7 +13,7 @@ Follow this tutorial to set up Ubuntu 18.04 server: https://www.digitalocean.com
 Deploy Wisdom code from `deployment` branch into /wisdom folder:
 
     $ git clone --branch deployment https://github.com/zadahmed/wisdomapi.git
-
+ 
 ### Set up virtualenv
 
 Change directory into /wisdom folder where you have imported the code, create a Python Venv and activate it:
@@ -74,4 +78,9 @@ Use the `deployment` branch to run code on the server. When changes are made, pu
 
     $ sudo journalctl -u wisdom --since "5 minutes ago"
     $ sudo cat /var/log/nginx/error.log
+
+
+### Restarting
+
+    $ sudo systemctl restart wisdom
 

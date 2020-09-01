@@ -25,6 +25,14 @@ from bs4 import BeautifulSoup
 from collections import Counter
 import pandas as pd
 from flask_mail import Mail, Message
+from newspaper import Article
+import re
+import spacy
+from spacy.lang.en import English
+import en_core_web_sm
+from nltk import sent_tokenize
+
+nlp = spacy.load("en_core_web_sm")
 
 ##########################
 # INSTANTIATE FLASK & DB #
@@ -72,6 +80,38 @@ except:
 #############
 # FUNCTIONS #
 #############
+
+def get_relevent_sentences(sentences, labels):
+    results = []
+    for sent in sentences:
+        if "\displaystyle" in sent:
+            pass
+        else:
+            sent_ents = nlp(sent)
+            names = []
+            for ent in sent_ents.ents:
+                if ent.label_ in labels:
+                    names.append(ent.text)
+            if names:
+                results.append([", ".join(n for n in names), sent])
+    return results
+
+def clean_article(weburl):
+    article = Article(weburl)
+    article.download()
+    article.parse()
+    text = article.text
+    if text:
+        text = text.strip()
+        text = BeautifulSoup(text, 'html.parser').text
+        cleanr = re.compile('<.*?>')
+        text = re.sub(cleanr, '', text)
+        text = re.sub("\[\d+\]", "", text)
+        text = re.sub("\[ edit ]", "", text)
+        text = re.sub("\sie.\s", " ie ", text)
+    sentences = sent_tokenize(text)
+    text = " ".join(s for s in sentences if "\displaystyle" not in s)
+    return text
 
 ##########
 # ROUTES #
@@ -428,6 +468,181 @@ def wisdom(search_me, source, pdfurl, userid):
     summaryjson = jsonify(wisdomtopics=topics, wisdomsummary=summary)
     return summaryjson
 
+@app.route('/crumble/webpage', methods=['POST'])
+def webpagesummary(): 
+    page = request.json
+    print(page)
+    url = page['url']
+    r = requests.get(url)
+    html = r.text
+    soup = BeautifulSoup(html, 'html.parser')
+    #soup = BeautifulSoup(html, 'lxml')
+    body = soup.body
+    if body:
+        # remove footer
+        while body.footer:
+            soup.footer.decompose()
+        # remove scripts
+        while body.script:
+            soup.script.decompose()
+        # get p tags
+        main_body = body.find_all(["p"])
+        text = ""
+        for m in main_body:
+            text += m.get_text()+" "
+        text = text.strip()
+        key_points = wisdomaiengine.summarisetext(text)
+        key_points = "\n\n".join(k for k in key_points)
+        jsonob = jsonify(text=text,
+                            key_points=key_points)
+        return jsonob
+
+
+@app.route('/crumble/extract/<path:weburl>', methods=['GET'])
+def extract(weburl):
+    q = weburl[7:]
+    weburl = "https://" + q
+    if ".pdf" in weburl[-10:]:
+        text = wisdomaiengine.pdfdocumentextracter(weburl)
+        text = re.sub("\[\d+\]", "", text)
+    else:
+        article = Article(weburl)
+        article.download()
+        article.parse()
+        text = article.text
+        if text:
+            text = text.strip()
+            text = BeautifulSoup(text, 'html.parser').text
+            cleanr = re.compile('<.*?>')
+            text = re.sub(cleanr, '', text)    
+            text = re.sub("\[\d+\]", "", text)  
+    jsonob = jsonify(text)
+    return jsonob
+
+
+@app.route('/crumble/page/<path:weburl>', methods=['GET'])
+def page(weburl):
+    q = weburl[7:]
+    weburl = "https://" + q
+    # article = Article(weburl, keep_article_html=True)
+    # article.download()
+    # article.parse()
+    # html = article.article_html
+    html_content = requests.get(weburl).text
+    soup = BeautifulSoup(html_content, "html.parser")
+    body = soup.find("body")
+    tags = []
+    # for p in soup.find_all("p"):
+    #     tags.append(str(p))
+    # for img in soup.find_all("img"):
+    #     tags.append(str(img))
+    allowed_tags = ["p", "img"]
+    for i in body.find_all(allowed_tags):
+        if i.name == "p":
+            text = "<p>"+i.text+"</p>"
+            tags.append(text)
+        if i.name == "img":
+            text = '<img src="'+str(i["src"])+'">'
+            tags.append(text)
+    content = "".join(i for i in tags)
+    content = content.replace("\\", "")
+    # content = "<p>"+content+"</p>"
+    jsonob = jsonify(content)
+    return jsonob
+        
+
+@app.route('/crumble/summarise/<path:weburl>', methods=['GET'])
+def c_summary(weburl):
+    q = weburl[7:]
+    weburl = "https://" + q
+    if ".pdf" in weburl[-10:]:
+        text = wisdomaiengine.pdfdocumentextracter(weburl)
+        text = re.sub("\[\d+\]", "", text)
+    else:
+        text = clean_article(weburl)
+    key_points = wisdomaiengine.summarisetext(text)
+    jsonob = jsonify(key_points)
+    return jsonob
+
+
+@app.route('/find/people/<path:weburl>', methods=["GET"])
+def find_people(weburl):
+    q = weburl[7:]
+    weburl = "https://" + q
+    if ".pdf" in weburl[-10:]:
+        text = wisdomaiengine.pdfdocumentextracter(weburl)
+        text = re.sub("\[\d+\]", "", text)
+    else:
+        text = clean_article(weburl)
+    sentences = sent_tokenize(text)
+    labels = ["PERSON"]
+    results = get_relevent_sentences(sentences, labels)
+    jsonob = jsonify(results)
+    return jsonob
+
+
+@app.route('/find/org/<path:weburl>', methods=["GET"])
+def find_org(weburl):
+    q = weburl[7:]
+    weburl = "https://" + q
+    if ".pdf" in weburl[-10:]:
+        text = wisdomaiengine.pdfdocumentextracter(weburl)
+        text = re.sub("\[\d+\]", "", text)
+    else:
+        text = clean_article(weburl)
+    sentences = sent_tokenize(text)
+    labels = ["ORG", "FAC"]
+    results = get_relevent_sentences(sentences, labels)
+    jsonob = jsonify(results)
+    return jsonob
+
+
+@app.route('/find/stats/<path:weburl>', methods=["GET"])
+def find_stats(weburl):
+    q = weburl[7:]
+    weburl = "https://" + q
+    if ".pdf" in weburl[-10:]:
+        text = wisdomaiengine.pdfdocumentextracter(weburl)
+        text = re.sub("\[\d+\]", "", text)
+    else:
+        text = clean_article(weburl)
+    text = re.sub("per cent", "percent", text)
+    sentences = sent_tokenize(text)
+    labels = ["TIME", "PERCENT", "MONEY", "QUANTITY", "CARDINAL"]
+    results = get_relevent_sentences(sentences, labels)
+    jsonob = jsonify(results)
+    return jsonob
+
+
+@app.route('/find/quotes/<path:weburl>', methods=["GET"])
+def find_quotes(weburl):
+    q = weburl[7:]
+    weburl = "https://" + q
+    if ".pdf" in weburl[-10:]:
+        text = wisdomaiengine.pdfdocumentextracter(weburl)
+        text = re.sub("\[\d+\]", "", text)
+    else:
+        text = clean_article(weburl)
+    sentences = sent_tokenize(text)
+    results = get_relevent_sentences(sentences, labels)
+    jsonob = jsonify(results)
+    return jsonob
+
+
+@app.route('/find/dates/<path:weburl>', methods=["GET"])
+def find_dates(weburl):
+    q = weburl[7:]
+    weburl = "https://" + q
+    if ".pdf" in weburl[-10:]:
+        text = wisdomaiengine.pdfdocumentextracter(weburl)
+        text = re.sub("\[\d+\]", "", text)
+    else:
+        text = clean_article(weburl)
+    sentences = sent_tokenize(text)
+    labels = ["DATE"]
+    results = get_relevent_sentences(sentences, labels)
+    jsonob = jsonify(results)
+    return jsonob
 
 
 # bring your own document

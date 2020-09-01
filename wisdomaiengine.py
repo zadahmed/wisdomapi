@@ -141,7 +141,7 @@ def summarisetext(text, key_points=5, complexity=5):
         summary = []
         for sent in doc_summary:
             try:
-                summary.append("• "+sent)
+                summary.append(sent)
             except:
                 pass
         doc_summary = summary
